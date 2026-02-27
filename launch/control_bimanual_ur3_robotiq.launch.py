@@ -1,0 +1,193 @@
+from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition
+from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
+from launch_ros.actions import Node
+from launch_ros.substitutions import FindPackageShare
+
+
+def generate_launch_description():
+    mode_arg = DeclareLaunchArgument(
+        'mode',
+        default_value='full_mock',
+        description='Control mode: full_mock or mock_grippers_only',
+    )
+    use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='false')
+    launch_dashboard_clients_arg = DeclareLaunchArgument(
+        'launch_dashboard_clients',
+        default_value='true',
+        description='Launch UR dashboard_client nodes for left and right robots when not using mock UR hardware',
+    )
+    dashboard_receive_timeout_arg = DeclareLaunchArgument(
+        'dashboard_receive_timeout',
+        default_value='20.0',
+        description='Timeout for UR dashboard client responses',
+    )
+    run_setup_node_arg = DeclareLaunchArgument(
+        'run_setup_node',
+        default_value='false',
+        description='Run bimanual dashboard setup sequence (power on, release brakes, load program, play)',
+    )
+    left_program_arg = DeclareLaunchArgument(
+        'left_program',
+        default_value='',
+        description='Program path to load on left robot dashboard (optional)',
+    )
+    right_program_arg = DeclareLaunchArgument(
+        'right_program',
+        default_value='',
+        description='Program path to load on right robot dashboard (optional)',
+    )
+
+    left_robot_ip_arg = DeclareLaunchArgument('left_robot_ip', default_value='0.0.0.0')
+    right_robot_ip_arg = DeclareLaunchArgument('right_robot_ip', default_value='0.0.0.0')
+    base_poses_file_arg = DeclareLaunchArgument(
+        'base_poses_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_robotiq'),
+            'config',
+            'robot_bases.yaml',
+        ]),
+        description='YAML file with left/right robot base poses',
+    )
+
+    controllers_file_arg = DeclareLaunchArgument(
+        'controllers_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_robotiq'),
+            'config',
+            'bimanual_controllers.yaml',
+        ]),
+        description='Controllers YAML for controller_manager',
+    )
+
+    urdf_file = PathJoinSubstitution([
+        FindPackageShare('ur_robotiq'),
+        'urdf',
+        'ur_robotiq.urdf',
+    ])
+
+    use_mock_hardware = PythonExpression([
+        "'", LaunchConfiguration('mode'), "' == 'full_mock'",
+    ])
+    use_mock_grippers = PythonExpression([
+        "'", LaunchConfiguration('mode'), "' in ['full_mock', 'mock_grippers_only']",
+    ])
+
+    robot_description_content = Command([
+        'xacro ',
+        urdf_file,
+        ' use_mock_hardware:=', use_mock_hardware,
+        ' use_mock_grippers:=', use_mock_grippers,
+        ' left_robot_ip:=', LaunchConfiguration('left_robot_ip'),
+        ' right_robot_ip:=', LaunchConfiguration('right_robot_ip'),
+        ' base_poses_file:=', LaunchConfiguration('base_poses_file'),
+    ])
+
+    robot_description = {'robot_description': robot_description_content}
+
+    launch_dashboard_clients = LaunchConfiguration('launch_dashboard_clients')
+    dashboard_receive_timeout = LaunchConfiguration('dashboard_receive_timeout')
+    start_dashboard_clients = PythonExpression([
+        "'", launch_dashboard_clients, "' == 'true' and not (", use_mock_hardware, ")",
+    ])
+    run_setup_node = PythonExpression([
+        "'", LaunchConfiguration('run_setup_node'), "' == 'true' and (", start_dashboard_clients, ")",
+    ])
+
+    robot_state_publisher = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        output='screen',
+        parameters=[robot_description, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
+    )
+
+    ros2_control_node = Node(
+        package='controller_manager',
+        executable='ros2_control_node',
+        output='screen',
+        parameters=[
+            robot_description,
+            LaunchConfiguration('controllers_file'),
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+        ],
+    )
+
+    left_dashboard_client = Node(
+        package='ur_robot_driver',
+        executable='dashboard_client',
+        namespace='left_ur',
+        name='dashboard_client',
+        output='screen',
+        emulate_tty=True,
+        condition=IfCondition(start_dashboard_clients),
+        parameters=[
+            {'robot_ip': LaunchConfiguration('left_robot_ip')},
+            {'receive_timeout': dashboard_receive_timeout},
+        ],
+    )
+
+    right_dashboard_client = Node(
+        package='ur_robot_driver',
+        executable='dashboard_client',
+        namespace='right_ur',
+        name='dashboard_client',
+        output='screen',
+        emulate_tty=True,
+        condition=IfCondition(start_dashboard_clients),
+        parameters=[
+            {'robot_ip': LaunchConfiguration('right_robot_ip')},
+            {'receive_timeout': dashboard_receive_timeout},
+        ],
+    )
+
+    bimanual_setup_node = Node(
+        package='ur_robotiq',
+        executable='bimanual_setup_node',
+        name='bimanual_setup_node',
+        output='screen',
+        condition=IfCondition(run_setup_node),
+        parameters=[
+            {'left_namespace': 'left_ur'},
+            {'right_namespace': 'right_ur'},
+            {'left_program': LaunchConfiguration('left_program')},
+            {'right_program': LaunchConfiguration('right_program')},
+            {'wait_for_service_timeout': dashboard_receive_timeout},
+            {'service_call_timeout': dashboard_receive_timeout},
+        ],
+    )
+
+    joint_state_broadcaster_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['joint_state_broadcaster', '--controller-manager', '/controller_manager'],
+        output='screen',
+    )
+
+    bimanual_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['bimanual_controller', '--controller-manager', '/controller_manager'],
+        output='screen',
+    )
+
+    return LaunchDescription([
+        mode_arg,
+        use_sim_time_arg,
+        launch_dashboard_clients_arg,
+        dashboard_receive_timeout_arg,
+        run_setup_node_arg,
+        left_program_arg,
+        right_program_arg,
+        left_robot_ip_arg,
+        right_robot_ip_arg,
+        base_poses_file_arg,
+        controllers_file_arg,
+        robot_state_publisher,
+        ros2_control_node,
+        left_dashboard_client,
+        right_dashboard_client,
+        bimanual_setup_node,
+        joint_state_broadcaster_spawner,
+        bimanual_controller_spawner,
+    ])

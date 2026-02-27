@@ -1,0 +1,88 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur3_robotiq">
+	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+	<xacro:include filename="$(find ur_robot_driver)/urdf/ur.ros2_control.xacro"/>
+	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
+	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
+	<xacro:include filename="$(find ur_robotiq)/urdf/ur3_robotiq_unit.urdf.xacro"/>
+
+	<xacro:arg name="use_mock_hardware" default="true"/>
+	<xacro:arg name="mock_sensor_commands" default="false"/>
+	<xacro:arg name="use_mock_grippers" default="true"/>
+	<xacro:arg name="gripper_fake_sensor_commands" default="false"/>
+
+	<xacro:arg name="left_robot_ip" default="0.0.0.0"/>
+	<xacro:arg name="right_robot_ip" default="0.0.0.0"/>
+	<xacro:arg name="script_filename" default="$(find ur_client_library)/resources/external_control.urscript"/>
+	<xacro:arg name="input_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_input_recipe.txt"/>
+	<xacro:arg name="output_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_output_recipe.txt"/>
+	<xacro:arg name="left_reverse_port" default="50001"/>
+	<xacro:arg name="left_script_sender_port" default="50002"/>
+	<xacro:arg name="left_trajectory_port" default="50003"/>
+	<xacro:arg name="left_script_command_port" default="50004"/>
+	<xacro:arg name="right_reverse_port" default="50101"/>
+	<xacro:arg name="right_script_sender_port" default="50102"/>
+	<xacro:arg name="right_trajectory_port" default="50103"/>
+	<xacro:arg name="right_script_command_port" default="50104"/>
+	<xacro:arg name="headless_mode" default="false"/>
+	<xacro:arg name="left_gripper_com_port" default="/dev/ttyUSB0"/>
+	<xacro:arg name="right_gripper_com_port" default="/dev/ttyUSB1"/>
+	<xacro:arg name="base_poses_file" default="$(find ur_robotiq)/config/robot_bases.yaml"/>
+
+	<xacro:property name="initial_positions_file" value="$(find ur_description)/config/initial_positions.yaml"/>
+	<xacro:property name="kinematics_parameters_file" value="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
+	<xacro:property name="initial_positions" value="${xacro.load_yaml(initial_positions_file)}"/>
+	<xacro:property name="base_poses_path" value="$(arg base_poses_file)"/>
+	<xacro:property name="base_poses" value="${xacro.load_yaml(base_poses_path)}"/>
+
+	<link name="world"/>
+
+	<xacro:ur3_robotiq_unit
+		arm_name="left_ur3"
+		tf_prefix="left_"
+		parent="world"
+		base_xyz="${base_poses['left_base_xyz']}"
+		base_rpy="${base_poses['left_base_rpy']}"
+		use_mock_hardware="$(arg use_mock_hardware)"
+		mock_sensor_commands="$(arg mock_sensor_commands)"
+		headless_mode="$(arg headless_mode)"
+		initial_positions="${initial_positions}"
+		kinematics_parameters_file="${kinematics_parameters_file}"
+		robot_ip="$(arg left_robot_ip)"
+		script_filename="$(arg script_filename)"
+		output_recipe_filename="$(arg output_recipe_filename)"
+		input_recipe_filename="$(arg input_recipe_filename)"
+		reverse_port="$(arg left_reverse_port)"
+		script_sender_port="$(arg left_script_sender_port)"
+		trajectory_port="$(arg left_trajectory_port)"
+		script_command_port="$(arg left_script_command_port)"
+		gripper_name="left_gripper"
+		gripper_use_fake_hardware="$(arg use_mock_grippers)"
+		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
+		gripper_com_port="$(arg left_gripper_com_port)"/>
+
+	<xacro:ur3_robotiq_unit
+		arm_name="right_ur3"
+		tf_prefix="right_"
+		parent="world"
+		base_xyz="${base_poses['right_base_xyz']}"
+		base_rpy="${base_poses['right_base_rpy']}"
+		use_mock_hardware="$(arg use_mock_hardware)"
+		mock_sensor_commands="$(arg mock_sensor_commands)"
+		headless_mode="$(arg headless_mode)"
+		initial_positions="${initial_positions}"
+		kinematics_parameters_file="${kinematics_parameters_file}"
+		robot_ip="$(arg right_robot_ip)"
+		script_filename="$(arg script_filename)"
+		output_recipe_filename="$(arg output_recipe_filename)"
+		input_recipe_filename="$(arg input_recipe_filename)"
+		reverse_port="$(arg right_reverse_port)"
+		script_sender_port="$(arg right_script_sender_port)"
+		trajectory_port="$(arg right_trajectory_port)"
+		script_command_port="$(arg right_script_command_port)"
+		gripper_name="right_gripper"
+		gripper_use_fake_hardware="$(arg use_mock_grippers)"
+		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
+		gripper_com_port="$(arg right_gripper_com_port)"/>
+
+</robot>

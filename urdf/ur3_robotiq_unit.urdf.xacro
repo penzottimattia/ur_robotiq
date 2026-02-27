@@ -1,0 +1,114 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur3_robotiq_unit">
+	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+	<xacro:include filename="$(find ur_robot_driver)/urdf/ur.ros2_control.xacro"/>
+	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
+	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
+
+	<xacro:arg name="instantiate_unit" default="false"/>
+	<xacro:property name="default_initial_positions" value="${xacro.load_yaml('$(find ur_description)/config/initial_positions.yaml')}"/>
+
+	<xacro:macro name="robotiq_minimal_ros2_control" params="name prefix use_fake_hardware fake_sensor_commands com_port">
+		<ros2_control name="${name}" type="system">
+			<hardware>
+				<xacro:if value="${use_fake_hardware}">
+					<plugin>mock_components/GenericSystem</plugin>
+					<param name="fake_sensor_commands">${fake_sensor_commands}</param>
+					<param name="state_following_offset">0.0</param>
+				</xacro:if>
+				<xacro:unless value="${use_fake_hardware}">
+					<plugin>robotiq_driver/RobotiqGripperHardwareInterface</plugin>
+					<param name="gripper_closed_position">0.7929</param>
+					<param name="COM_port">${com_port}</param>
+					<param name="gripper_speed_multiplier">1.0</param>
+					<param name="gripper_force_multiplier">0.5</param>
+				</xacro:unless>
+			</hardware>
+
+			<joint name="${prefix}robotiq_85_left_knuckle_joint">
+				<command_interface name="position"/>
+				<state_interface name="position">
+					<param name="initial_value">0.7929</param>
+				</state_interface>
+				<state_interface name="velocity"/>
+			</joint>
+		</ros2_control>
+	</xacro:macro>
+
+	<xacro:macro name="ur3_robotiq_unit" params="
+		arm_name:='ur3' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
+		use_mock_hardware:='true' mock_sensor_commands:='false' headless_mode:='false'
+		initial_positions:=${default_initial_positions}
+		kinematics_parameters_file:='$(find ur_description)/config/ur3/default_kinematics.yaml'
+		robot_ip:='0.0.0.0' script_filename:='$(find ur_client_library)/resources/external_control.urscript'
+		output_recipe_filename:='$(find ur_robot_driver)/resources/rtde_output_recipe.txt'
+		input_recipe_filename:='$(find ur_robot_driver)/resources/rtde_input_recipe.txt'
+		reverse_port:='50001' script_sender_port:='50002' trajectory_port:='50003' script_command_port:='50004'
+		gripper_name:='gripper' gripper_use_fake_hardware:='true'
+		gripper_fake_sensor_commands:='false' gripper_com_port:='/dev/ttyUSB0'
+	">
+		<xacro:ur_robot
+			name="${arm_name}"
+			tf_prefix="${tf_prefix}"
+			parent="${parent}"
+			joint_limits_parameters_file="$(find ur_description)/config/ur3/joint_limits.yaml"
+			kinematics_parameters_file="${kinematics_parameters_file}"
+			physical_parameters_file="$(find ur_description)/config/ur3/physical_parameters.yaml"
+			visual_parameters_file="$(find ur_description)/config/ur3/visual_parameters.yaml"
+			safety_limits="true"
+			safety_pos_margin="0.15"
+			safety_k_position="20"
+			force_abs_paths="false">
+			<origin xyz="${base_xyz}" rpy="${base_rpy}"/>
+		</xacro:ur_robot>
+
+		<xacro:ur_ros2_control
+			name="${arm_name}"
+			tf_prefix="${tf_prefix}"
+			kinematics_parameters_file="${kinematics_parameters_file}"
+			transmission_hw_interface="hardware_interface/PositionJointInterface"
+			use_mock_hardware="${use_mock_hardware}"
+			mock_sensor_commands="${mock_sensor_commands}"
+			headless_mode="${headless_mode}"
+			initial_positions="${initial_positions}"
+			robot_ip="${robot_ip}"
+			script_filename="${script_filename}"
+			output_recipe_filename="${output_recipe_filename}"
+			input_recipe_filename="${input_recipe_filename}"
+			reverse_ip="0.0.0.0"
+			reverse_port="${reverse_port}"
+			script_sender_port="${script_sender_port}"
+			trajectory_port="${trajectory_port}"
+			script_command_port="${script_command_port}"/>
+
+		<xacro:ur_to_robotiq
+			prefix="${tf_prefix}"
+			connected_to="${tf_prefix}tool0"
+			rotation="0.0"/>
+
+		<xacro:robotiq_gripper
+			name="${gripper_name}"
+			prefix="${tf_prefix}"
+			parent="${tf_prefix}gripper_mount_link"
+			include_ros2_control="false"
+			use_fake_hardware="${gripper_use_fake_hardware}"
+			fake_sensor_commands="${gripper_fake_sensor_commands}"
+			sim_ignition="false"
+			sim_isaac="false"
+			com_port="${gripper_com_port}">
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+		</xacro:robotiq_gripper>
+
+		<xacro:robotiq_minimal_ros2_control
+			name="${gripper_name}"
+			prefix="${tf_prefix}"
+			use_fake_hardware="${gripper_use_fake_hardware}"
+			fake_sensor_commands="${gripper_fake_sensor_commands}"
+			com_port="${gripper_com_port}"/>
+	</xacro:macro>
+
+	<xacro:if value="$(arg instantiate_unit)">
+		<link name="world"/>
+		<xacro:ur3_robotiq_unit/>
+	</xacro:if>
+</robot>
