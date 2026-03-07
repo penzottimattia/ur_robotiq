@@ -32,6 +32,11 @@
 				</state_interface>
 				<state_interface name="velocity"/>
 			</joint>
+
+			<gpio name="${prefix}reactivate_gripper">
+				<command_interface name="reactivate_gripper_cmd"/>
+				<command_interface name="reactivate_gripper_response"/>
+			</gpio>
 		</ros2_control>
 	</xacro:macro>
 
@@ -83,7 +88,8 @@
 
 		<xacro:ur_to_robotiq
 			prefix="${tf_prefix}"
-			connected_to="${tf_prefix}tool0"
+			parent="${tf_prefix}tool0"
+			child="${tf_prefix}gripper_mount_link"
 			rotation="0.0"/>
 
 		<xacro:robotiq_gripper
@@ -92,8 +98,8 @@
 			parent="${tf_prefix}gripper_mount_link"
 			include_ros2_control="false"
 			use_fake_hardware="${gripper_use_fake_hardware}"
-			fake_sensor_commands="${gripper_fake_sensor_commands}"
-			sim_ignition="false"
+			mock_sensor_commands="${gripper_fake_sensor_commands}"
+			sim_gazebo="false"
 			sim_isaac="false"
 			com_port="${gripper_com_port}">
 			<origin xyz="0 0 0" rpy="0 0 0"/>
