@@ -49,8 +49,12 @@
 		output_recipe_filename:='$(find ur_robot_driver)/resources/rtde_output_recipe.txt'
 		input_recipe_filename:='$(find ur_robot_driver)/resources/rtde_input_recipe.txt'
 		reverse_port:='50001' script_sender_port:='50002' trajectory_port:='50003' script_command_port:='50004'
+		use_tool_communication:='false' tool_voltage:='24'
+		tool_parity:='0' tool_baud_rate:='115200' tool_stop_bits:='1'
+		tool_rx_idle_chars:='1.5' tool_tx_idle_chars:='3.5'
+		tool_device_name:='/tmp/ttyUR' tool_tcp_port:='54321'
 		gripper_name:='gripper' gripper_use_fake_hardware:='true'
-		gripper_fake_sensor_commands:='false' gripper_com_port:='/dev/ttyUSB0'
+		gripper_fake_sensor_commands:='false' gripper_com_port:='/tmp/ttyUR'
 	">
 		<xacro:ur_robot
 			name="${arm_name}"
@@ -84,7 +88,16 @@
 			reverse_port="${reverse_port}"
 			script_sender_port="${script_sender_port}"
 			trajectory_port="${trajectory_port}"
-			script_command_port="${script_command_port}"/>
+			script_command_port="${script_command_port}"
+			use_tool_communication="${use_tool_communication}"
+			tool_voltage="${tool_voltage}"
+			tool_parity="${tool_parity}"
+			tool_baud_rate="${tool_baud_rate}"
+			tool_stop_bits="${tool_stop_bits}"
+			tool_rx_idle_chars="${tool_rx_idle_chars}"
+			tool_tx_idle_chars="${tool_tx_idle_chars}"
+			tool_device_name="${tool_device_name}"
+			tool_tcp_port="${tool_tcp_port}"/>
 
 		<xacro:ur_to_robotiq
 			prefix="${tf_prefix}"

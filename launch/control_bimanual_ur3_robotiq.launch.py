@@ -1,6 +1,6 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition
+from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
@@ -41,6 +41,22 @@ def generate_launch_description():
 
     left_robot_ip_arg = DeclareLaunchArgument('left_robot_ip', default_value='0.0.0.0')
     right_robot_ip_arg = DeclareLaunchArgument('right_robot_ip', default_value='0.0.0.0')
+    left_tool_device_name_arg = DeclareLaunchArgument(
+        'left_tool_device_name', default_value='/tmp/ttyUR_left',
+        description='Virtual serial device path for left gripper tool communication',
+    )
+    right_tool_device_name_arg = DeclareLaunchArgument(
+        'right_tool_device_name', default_value='/tmp/ttyUR_right',
+        description='Virtual serial device path for right gripper tool communication',
+    )
+    left_tool_tcp_port_arg = DeclareLaunchArgument(
+        'left_tool_tcp_port', default_value='54321',
+        description='TCP port for left UR tool communication bridge',
+    )
+    right_tool_tcp_port_arg = DeclareLaunchArgument(
+        'right_tool_tcp_port', default_value='54322',
+        description='TCP port for right UR tool communication bridge',
+    )
     base_poses_file_arg = DeclareLaunchArgument(
         'base_poses_file',
         default_value=PathJoinSubstitution([
@@ -82,6 +98,10 @@ def generate_launch_description():
         ' left_robot_ip:=', LaunchConfiguration('left_robot_ip'),
         ' right_robot_ip:=', LaunchConfiguration('right_robot_ip'),
         ' base_poses_file:=', LaunchConfiguration('base_poses_file'),
+        ' left_gripper_com_port:=', LaunchConfiguration('left_tool_device_name'),
+        ' right_gripper_com_port:=', LaunchConfiguration('right_tool_device_name'),
+        ' left_tool_tcp_port:=', LaunchConfiguration('left_tool_tcp_port'),
+        ' right_tool_tcp_port:=', LaunchConfiguration('right_tool_tcp_port'),
     ])
 
     robot_description = {'robot_description': robot_description_content}
@@ -95,6 +115,35 @@ def generate_launch_description():
         "'", LaunchConfiguration('run_setup_node'), "' == 'true' and (", start_dashboard_clients, ")",
     ])
 
+    def launch_ros2_control(context):
+        mode = LaunchConfiguration('mode').perform(context)
+        real_grippers = mode not in ('full_mock', 'mock_grippers_only')
+
+        params = [
+            robot_description,
+            LaunchConfiguration('controllers_file'),
+            {'use_sim_time': LaunchConfiguration('use_sim_time')},
+        ]
+        # When using real grippers connected via UR tool I/O, start them
+        # unconfigured so the ros2_control_node doesn't crash before the UR
+        # driver creates the virtual serial ports.
+        # Activate later with:
+        #   ros2 control set_hardware_component_state left_gripper active
+        #   ros2 control set_hardware_component_state right_gripper active
+        if real_grippers:
+            params.append({
+                'hardware_components_initial_state.unconfigured': [
+                    'left_gripper', 'right_gripper',
+                ],
+            })
+
+        return [Node(
+            package='controller_manager',
+            executable='ros2_control_node',
+            output='screen',
+            parameters=params,
+        )]
+
     robot_state_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -102,15 +151,32 @@ def generate_launch_description():
         parameters=[robot_description, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
     )
 
-    ros2_control_node = Node(
-        package='controller_manager',
-        executable='ros2_control_node',
+    # socat bridges: forward UR tool RS-485 communication to local virtual serial ports.
+    # Only launched when using real hardware (not mock).
+    left_tool_comm = Node(
+        package='ur_robot_driver',
+        executable='tool_communication.py',
+        name='left_ur_tool_comm',
         output='screen',
-        parameters=[
-            robot_description,
-            LaunchConfiguration('controllers_file'),
-            {'use_sim_time': LaunchConfiguration('use_sim_time')},
-        ],
+        condition=UnlessCondition(use_mock_hardware),
+        parameters=[{
+            'robot_ip': LaunchConfiguration('left_robot_ip'),
+            'tcp_port': LaunchConfiguration('left_tool_tcp_port'),
+            'device_name': LaunchConfiguration('left_tool_device_name'),
+        }],
+    )
+
+    right_tool_comm = Node(
+        package='ur_robot_driver',
+        executable='tool_communication.py',
+        name='right_ur_tool_comm',
+        output='screen',
+        condition=UnlessCondition(use_mock_hardware),
+        parameters=[{
+            'robot_ip': LaunchConfiguration('right_robot_ip'),
+            'tcp_port': LaunchConfiguration('right_tool_tcp_port'),
+            'device_name': LaunchConfiguration('right_tool_device_name'),
+        }],
     )
 
     left_dashboard_client = Node(
@@ -181,10 +247,16 @@ def generate_launch_description():
         right_program_arg,
         left_robot_ip_arg,
         right_robot_ip_arg,
+        left_tool_device_name_arg,
+        right_tool_device_name_arg,
+        left_tool_tcp_port_arg,
+        right_tool_tcp_port_arg,
         base_poses_file_arg,
         controllers_file_arg,
         robot_state_publisher,
-        ros2_control_node,
+        left_tool_comm,
+        right_tool_comm,
+        OpaqueFunction(function=launch_ros2_control),
         left_dashboard_client,
         right_dashboard_client,
         bimanual_setup_node,

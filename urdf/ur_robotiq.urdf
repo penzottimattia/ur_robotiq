@@ -25,8 +25,10 @@
 	<xacro:arg name="right_trajectory_port" default="50103"/>
 	<xacro:arg name="right_script_command_port" default="50104"/>
 	<xacro:arg name="headless_mode" default="false"/>
-	<xacro:arg name="left_gripper_com_port" default="/dev/ttyUSB0"/>
-	<xacro:arg name="right_gripper_com_port" default="/dev/ttyUSB1"/>
+	<xacro:arg name="left_gripper_com_port" default="/tmp/ttyUR_left"/>
+	<xacro:arg name="right_gripper_com_port" default="/tmp/ttyUR_right"/>
+	<xacro:arg name="left_tool_tcp_port" default="54321"/>
+	<xacro:arg name="right_tool_tcp_port" default="54322"/>
 	<xacro:arg name="base_poses_file" default="$(find ur_robotiq)/config/robot_bases.yaml"/>
 
 	<xacro:property name="initial_positions_file" value="$(find ur_description)/config/initial_positions.yaml"/>
@@ -56,6 +58,10 @@
 		script_sender_port="$(arg left_script_sender_port)"
 		trajectory_port="$(arg left_trajectory_port)"
 		script_command_port="$(arg left_script_command_port)"
+		use_tool_communication="true"
+		tool_voltage="24"
+		tool_device_name="$(arg left_gripper_com_port)"
+		tool_tcp_port="$(arg left_tool_tcp_port)"
 		gripper_name="left_gripper"
 		gripper_use_fake_hardware="$(arg use_mock_grippers)"
 		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
@@ -80,6 +86,10 @@
 		script_sender_port="$(arg right_script_sender_port)"
 		trajectory_port="$(arg right_trajectory_port)"
 		script_command_port="$(arg right_script_command_port)"
+		use_tool_communication="true"
+		tool_voltage="24"
+		tool_device_name="$(arg right_gripper_com_port)"
+		tool_tcp_port="$(arg right_tool_tcp_port)"
 		gripper_name="right_gripper"
 		gripper_use_fake_hardware="$(arg use_mock_grippers)"
 		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
