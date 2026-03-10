@@ -75,9 +75,6 @@ EOF
   esac
 done
 
-source /opt/ros/jazzy/setup.bash
-source /ws/install/setup.bash
-
 launch_args=(
   mode:="$MODE"
   left_robot_ip:="$LEFT_ROBOT_IP"

@@ -10,6 +10,7 @@
 	<xacro:arg name="mock_sensor_commands" default="false"/>
 	<xacro:arg name="use_mock_grippers" default="true"/>
 	<xacro:arg name="gripper_fake_sensor_commands" default="false"/>
+	<xacro:arg name="use_calib_probe" default="false"/>
 
 	<xacro:arg name="left_robot_ip" default="0.0.0.0"/>
 	<xacro:arg name="right_robot_ip" default="0.0.0.0"/>
@@ -65,7 +66,8 @@
 		gripper_name="left_gripper"
 		gripper_use_fake_hardware="$(arg use_mock_grippers)"
 		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
-		gripper_com_port="$(arg left_gripper_com_port)"/>
+		gripper_com_port="$(arg left_gripper_com_port)"
+		use_calib_probe="$(arg use_calib_probe)"/>
 
 	<xacro:ur3_robotiq_unit
 		arm_name="right_ur3"
@@ -93,6 +95,7 @@
 		gripper_name="right_gripper"
 		gripper_use_fake_hardware="$(arg use_mock_grippers)"
 		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
-		gripper_com_port="$(arg right_gripper_com_port)"/>
+		gripper_com_port="$(arg right_gripper_com_port)"
+		use_calib_probe="$(arg use_calib_probe)"/>
 
 </robot>

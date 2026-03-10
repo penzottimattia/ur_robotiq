@@ -14,6 +14,7 @@ setup(
         ('share/' + package_name + '/launch', glob('launch/*.launch.py')),
         ('share/' + package_name + '/config', glob('config/*.yaml')),
         ('share/' + package_name + '/urdf', glob('urdf/*')),
+        ('share/' + package_name + '/meshes', glob('meshes/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -30,6 +31,7 @@ setup(
         'console_scripts': [
             'bimanual_setup_node = ur_robotiq.bimanual_setup_node:main',
             'export_unit_assets = ur_robotiq.export_unit_assets:main',
+            'compute_camera_to_base = ur_robotiq.compute_camera_to_base:main',
         ],
     },
 )

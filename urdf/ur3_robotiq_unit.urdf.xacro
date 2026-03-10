@@ -55,6 +55,7 @@
 		tool_device_name:='/tmp/ttyUR' tool_tcp_port:='54321'
 		gripper_name:='gripper' gripper_use_fake_hardware:='true'
 		gripper_fake_sensor_commands:='false' gripper_com_port:='/tmp/ttyUR'
+		use_calib_probe:='false'
 	">
 		<xacro:ur_robot
 			name="${arm_name}"
@@ -84,7 +85,6 @@
 			script_filename="${script_filename}"
 			output_recipe_filename="${output_recipe_filename}"
 			input_recipe_filename="${input_recipe_filename}"
-			reverse_ip="0.0.0.0"
 			reverse_port="${reverse_port}"
 			script_sender_port="${script_sender_port}"
 			trajectory_port="${trajectory_port}"
@@ -124,6 +124,21 @@
 			use_fake_hardware="${gripper_use_fake_hardware}"
 			fake_sensor_commands="${gripper_fake_sensor_commands}"
 			com_port="${gripper_com_port}"/>
+
+		<xacro:if value="${use_calib_probe}">
+			<link name="${tf_prefix}probe_link">
+				<visual>
+					<geometry>
+						<mesh filename="package://ur_robotiq/meshes/triangle.obj"/>
+					</geometry>
+				</visual>
+			</link>
+			<joint name="${tf_prefix}probe_joint" type="fixed">
+				<parent link="${tf_prefix}tool0"/>
+				<child link="${tf_prefix}probe_link"/>
+				<origin xyz="0 0 0.15" rpy="1.57 0 0"/>
+			</joint>
+		</xacro:if>
 	</xacro:macro>
 
 	<xacro:if value="$(arg instantiate_unit)">

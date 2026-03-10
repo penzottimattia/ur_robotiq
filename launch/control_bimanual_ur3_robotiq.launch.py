@@ -10,7 +10,7 @@ def generate_launch_description():
     mode_arg = DeclareLaunchArgument(
         'mode',
         default_value='full_mock',
-        description='Control mode: full_mock or mock_grippers_only',
+        description='Control mode: full_mock, mock_grippers_only, or calib',
     )
     use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='false')
     launch_dashboard_clients_arg = DeclareLaunchArgument(
@@ -87,7 +87,10 @@ def generate_launch_description():
         "'", LaunchConfiguration('mode'), "' == 'full_mock'",
     ])
     use_mock_grippers = PythonExpression([
-        "'", LaunchConfiguration('mode'), "' in ['full_mock', 'mock_grippers_only']",
+        "'", LaunchConfiguration('mode'), "' in ['full_mock', 'mock_grippers_only', 'calib']",
+    ])
+    use_calib_probe = PythonExpression([
+        "'", LaunchConfiguration('mode'), "' == 'calib'",
     ])
 
     robot_description_content = Command([
@@ -95,6 +98,7 @@ def generate_launch_description():
         urdf_file,
         ' use_mock_hardware:=', use_mock_hardware,
         ' use_mock_grippers:=', use_mock_grippers,
+        ' use_calib_probe:=', use_calib_probe,
         ' left_robot_ip:=', LaunchConfiguration('left_robot_ip'),
         ' right_robot_ip:=', LaunchConfiguration('right_robot_ip'),
         ' base_poses_file:=', LaunchConfiguration('base_poses_file'),
@@ -226,14 +230,14 @@ def generate_launch_description():
     joint_state_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['joint_state_broadcaster', '--controller-manager', '/controller_manager'],
+        arguments=['joint_state_broadcaster', 'left_state_broadcaster', 'left_fts_broadcaster', 'right_state_broadcaster', 'right_fts_broadcaster', '--controller-manager', '/controller_manager'],
         output='screen',
     )
 
     bimanual_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['bimanual_controller', '--controller-manager', '/controller_manager'],
+        arguments=['left_arm_controller', 'right_arm_controller', '--controller-manager', '/controller_manager'],
         output='screen',
     )
 
