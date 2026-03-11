@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur3_robotiq">
 	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
-	<xacro:include filename="$(find ur_robot_driver)/urdf/ur.ros2_control.xacro"/>
+	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
 	<xacro:include filename="$(find ur_robotiq)/urdf/ur3_robotiq_unit.urdf.xacro"/>
@@ -11,6 +11,9 @@
 	<xacro:arg name="use_mock_grippers" default="true"/>
 	<xacro:arg name="gripper_fake_sensor_commands" default="false"/>
 	<xacro:arg name="use_calib_probe" default="false"/>
+
+	<xacro:arg name="left_calib_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
+	<xacro:arg name="right_calib_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
 
 	<xacro:arg name="left_robot_ip" default="0.0.0.0"/>
 	<xacro:arg name="right_robot_ip" default="0.0.0.0"/>
@@ -33,7 +36,6 @@
 	<xacro:arg name="base_poses_file" default="$(find ur_robotiq)/config/robot_bases.yaml"/>
 
 	<xacro:property name="initial_positions_file" value="$(find ur_description)/config/initial_positions.yaml"/>
-	<xacro:property name="kinematics_parameters_file" value="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
 	<xacro:property name="initial_positions" value="${xacro.load_yaml(initial_positions_file)}"/>
 	<xacro:property name="base_poses_path" value="$(arg base_poses_file)"/>
 	<xacro:property name="base_poses" value="${xacro.load_yaml(base_poses_path)}"/>
@@ -50,7 +52,7 @@
 		mock_sensor_commands="$(arg mock_sensor_commands)"
 		headless_mode="$(arg headless_mode)"
 		initial_positions="${initial_positions}"
-		kinematics_parameters_file="${kinematics_parameters_file}"
+		kinematics_parameters_file="$(arg left_calib_file)"
 		robot_ip="$(arg left_robot_ip)"
 		script_filename="$(arg script_filename)"
 		output_recipe_filename="$(arg output_recipe_filename)"
@@ -79,7 +81,7 @@
 		mock_sensor_commands="$(arg mock_sensor_commands)"
 		headless_mode="$(arg headless_mode)"
 		initial_positions="${initial_positions}"
-		kinematics_parameters_file="${kinematics_parameters_file}"
+		kinematics_parameters_file="$(arg right_calib_file)"
 		robot_ip="$(arg right_robot_ip)"
 		script_filename="$(arg script_filename)"
 		output_recipe_filename="$(arg output_recipe_filename)"

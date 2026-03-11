@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur3_robotiq_unit">
 	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
-	<xacro:include filename="$(find ur_robot_driver)/urdf/ur.ros2_control.xacro"/>
+	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
 
@@ -68,17 +68,9 @@
 			safety_limits="true"
 			safety_pos_margin="0.15"
 			safety_k_position="20"
-			force_abs_paths="false">
-			<origin xyz="${base_xyz}" rpy="${base_rpy}"/>
-		</xacro:ur_robot>
-
-		<xacro:ur_ros2_control
-			name="${arm_name}"
-			tf_prefix="${tf_prefix}"
-			kinematics_parameters_file="${kinematics_parameters_file}"
-			transmission_hw_interface="hardware_interface/PositionJointInterface"
-			use_mock_hardware="${use_mock_hardware}"
-			mock_sensor_commands="${mock_sensor_commands}"
+			generate_ros2_control_tag="true"
+			use_fake_hardware="${use_mock_hardware}"
+			fake_sensor_commands="${mock_sensor_commands}"
 			headless_mode="${headless_mode}"
 			initial_positions="${initial_positions}"
 			robot_ip="${robot_ip}"
@@ -97,7 +89,9 @@
 			tool_rx_idle_chars="${tool_rx_idle_chars}"
 			tool_tx_idle_chars="${tool_tx_idle_chars}"
 			tool_device_name="${tool_device_name}"
-			tool_tcp_port="${tool_tcp_port}"/>
+			tool_tcp_port="${tool_tcp_port}">
+			<origin xyz="${base_xyz}" rpy="${base_rpy}"/>
+		</xacro:ur_robot>
 
 		<xacro:ur_to_robotiq
 			prefix="${tf_prefix}"

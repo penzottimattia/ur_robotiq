@@ -77,6 +77,27 @@ def generate_launch_description():
         description='Controllers YAML for controller_manager',
     )
 
+    # Add calibration file launch arguments so calibration YAMLs are passed through to the URDF xacro
+    left_calib_file_arg = DeclareLaunchArgument(
+        'left_calib_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_robotiq'),
+            'config',
+            'left_ur3_calibration.yaml',
+        ]),
+        description='Calibration YAML for left robot',
+    )
+
+    right_calib_file_arg = DeclareLaunchArgument(
+        'right_calib_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_robotiq'),
+            'config',
+            'right_ur3_calibration.yaml',
+        ]),
+        description='Calibration YAML for right robot',
+    )
+
     urdf_file = PathJoinSubstitution([
         FindPackageShare('ur_robotiq'),
         'urdf',
@@ -106,6 +127,9 @@ def generate_launch_description():
         ' right_gripper_com_port:=', LaunchConfiguration('right_tool_device_name'),
         ' left_tool_tcp_port:=', LaunchConfiguration('left_tool_tcp_port'),
         ' right_tool_tcp_port:=', LaunchConfiguration('right_tool_tcp_port'),
+        # Pass calibration file paths through to the xacro so they are available in the generated robot_description
+        ' left_calib_file:=', LaunchConfiguration('left_calib_file'),
+        ' right_calib_file:=', LaunchConfiguration('right_calib_file'),
     ])
 
     robot_description = {'robot_description': robot_description_content}
@@ -257,6 +281,9 @@ def generate_launch_description():
         right_tool_tcp_port_arg,
         base_poses_file_arg,
         controllers_file_arg,
+        # include new calibration launch args
+        left_calib_file_arg,
+        right_calib_file_arg,
         robot_state_publisher,
         left_tool_comm,
         right_tool_comm,
@@ -264,6 +291,6 @@ def generate_launch_description():
         left_dashboard_client,
         right_dashboard_client,
         bimanual_setup_node,
-        joint_state_broadcaster_spawner,
-        bimanual_controller_spawner,
+        # joint_state_broadcaster_spawner,
+        # bimanual_controller_spawner,
     ])
