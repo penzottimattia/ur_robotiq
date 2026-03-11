@@ -125,6 +125,14 @@ class HandEyeCalibrator(Node):
             except Exception:
                 pass
 
+        # request shutdown so main spin exits and program terminates
+        try:
+            self.get_logger().info('Shutting down after keypress')
+            rclpy.shutdown()
+        except Exception as e:
+            # rclpy.shutdown may fail if rclpy not initialized or already shut down
+            self.get_logger().warn(f'Failed to shut down rclpy from keyboard monitor: {e}')
+
     def _pose_cb(self, msg: PoseStamped):
         if len(self.matrices) >= self.samples:
             return
