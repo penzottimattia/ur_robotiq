@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction, ExecuteProcess
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
@@ -112,6 +112,11 @@ def generate_launch_description():
     ])
     use_calib_probe = PythonExpression([
         "'", LaunchConfiguration('mode'), "' == 'calib'",
+    ])
+
+    # True when using real grippers attached to the robot (not in any mock mode)
+    real_grippers = PythonExpression([
+        "'", LaunchConfiguration('mode'), "' not in ['full_mock', 'mock_grippers_only']",
     ])
 
     robot_description_content = Command([
@@ -265,6 +270,47 @@ def generate_launch_description():
         output='screen',
     )
 
+    # After ros2_control_node has started we need to activate hardware gripper components
+    # and load/activate controllers. Use a short delay to let the control node come up.
+    # For real grippers: perform activation at 5s, then wait another 5s before spawning controllers.
+    # For mock configurations: spawn controllers at the original 5s.
+    post_start_actions = TimerAction(
+        period=5.0,
+        actions=[
+            # activate real grippers only when not running in mock mode
+            ExecuteProcess(
+                cmd=['ros2', 'control', 'set_hardware_component_state', 'left_gripper', 'active'],
+                output='screen',
+                condition=IfCondition(real_grippers),
+            ),
+            ExecuteProcess(
+                cmd=['ros2', 'control', 'set_hardware_component_state', 'right_gripper', 'active'],
+                output='screen',
+                condition=IfCondition(real_grippers),
+            ),
+
+            # For real grippers: spawn controllers 5s after activation (total ~10s after start)
+            TimerAction(
+                period=5.0,
+                actions=[
+                    joint_state_broadcaster_spawner,
+                    bimanual_controller_spawner,
+                ],
+                condition=IfCondition(real_grippers),
+            ),
+
+            # For mock modes: spawn controllers at the original 5s delay
+            TimerAction(
+                period=0.0,
+                actions=[
+                    joint_state_broadcaster_spawner,
+                    bimanual_controller_spawner,
+                ],
+                condition=UnlessCondition(real_grippers),
+            ),
+        ],
+    )
+
     return LaunchDescription([
         mode_arg,
         use_sim_time_arg,
@@ -291,6 +337,5 @@ def generate_launch_description():
         left_dashboard_client,
         right_dashboard_client,
         bimanual_setup_node,
-        # joint_state_broadcaster_spawner,
-        # bimanual_controller_spawner,
+        post_start_actions,
     ])
