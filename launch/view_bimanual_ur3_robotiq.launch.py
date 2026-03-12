@@ -26,6 +26,28 @@ def generate_launch_description():
         description='YAML file with left/right robot base poses',
     )
 
+    left_calib_file_arg = DeclareLaunchArgument(
+        'left_calib_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_description'),
+            'config',
+            'ur3',
+            'default_kinematics.yaml',
+        ]),
+        description='YAML file with left robot kinematics calibration',
+    )
+
+    right_calib_file_arg = DeclareLaunchArgument(
+        'right_calib_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_description'),
+            'config',
+            'ur3',
+            'default_kinematics.yaml',
+        ]),
+        description='YAML file with right robot kinematics calibration',
+    )
+
     urdf_file = PathJoinSubstitution([
         FindPackageShare('ur_robotiq'),
         'urdf',
@@ -49,6 +71,8 @@ def generate_launch_description():
         ' use_mock_grippers:=', use_mock_grippers,
         ' use_calib_probe:=', use_calib_probe,
         ' base_poses_file:=', LaunchConfiguration('base_poses_file'),
+        ' left_calib_file:=', LaunchConfiguration('left_calib_file'),
+        ' right_calib_file:=', LaunchConfiguration('right_calib_file'),
     ])
 
     robot_description = {'robot_description': robot_description_content}
@@ -90,6 +114,8 @@ def generate_launch_description():
         use_gui_arg,
         use_sim_time_arg,
         base_poses_file_arg,
+        left_calib_file_arg,
+        right_calib_file_arg,
         robot_state_publisher,
         joint_state_publisher_gui,
         joint_state_publisher,

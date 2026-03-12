@@ -6,6 +6,7 @@
 	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
 
 	<xacro:arg name="instantiate_unit" default="false"/>
+	<xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
 	<xacro:property name="default_initial_positions" value="${xacro.load_yaml('$(find ur_description)/config/initial_positions.yaml')}"/>
 
 	<xacro:macro name="robotiq_minimal_ros2_control" params="name prefix use_fake_hardware fake_sensor_commands com_port">
@@ -137,6 +138,7 @@
 
 	<xacro:if value="$(arg instantiate_unit)">
 		<link name="world"/>
-		<xacro:ur3_robotiq_unit/>
+		<xacro:ur3_robotiq_unit
+			kinematics_parameters_file="$(arg kinematics_parameters_file)"/>
 	</xacro:if>
 </robot>
