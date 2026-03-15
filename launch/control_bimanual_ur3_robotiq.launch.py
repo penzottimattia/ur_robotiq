@@ -266,8 +266,36 @@ def generate_launch_description():
     bimanual_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['left_arm_controller', 'right_arm_controller', '--controller-manager', '/controller_manager'],
+        arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager'],
         output='screen',
+    )
+
+    left_joint_state_to_traj_node = Node(
+        package='ur_robotiq',
+        executable='joint_state_to_trajectory_node',
+        name='left_joint_state_to_trajectory_node',
+        output='screen',
+        parameters=[{
+            'tf_prefix': 'left_',
+            'joint_state_topic': '/left_arm_controller/commands',
+            'trajectory_topic': '/left_arm_controller/joint_trajectory',
+            'gripper_topic': '/left_gripper_controller/commands',
+            'gripper_joint': 'robotiq_85_left_knuckle_joint',
+        }],
+    )
+
+    right_joint_state_to_traj_node = Node(
+        package='ur_robotiq',
+        executable='joint_state_to_trajectory_node',
+        name='right_joint_state_to_trajectory_node',
+        output='screen',
+        parameters=[{
+            'tf_prefix': 'right_',
+            'joint_state_topic': '/right_arm_controller/commands',
+            'trajectory_topic': '/right_arm_controller/joint_trajectory',
+            'gripper_topic': '/right_gripper_controller/commands',
+            'gripper_joint': 'robotiq_85_left_knuckle_joint',
+        }],
     )
 
     # After ros2_control_node has started we need to activate hardware gripper components
@@ -295,6 +323,8 @@ def generate_launch_description():
                 actions=[
                     joint_state_broadcaster_spawner,
                     bimanual_controller_spawner,
+                    left_joint_state_to_traj_node,
+                    right_joint_state_to_traj_node,
                 ],
                 condition=IfCondition(real_grippers),
             ),
@@ -305,6 +335,8 @@ def generate_launch_description():
                 actions=[
                     joint_state_broadcaster_spawner,
                     bimanual_controller_spawner,
+                    left_joint_state_to_traj_node,
+                    right_joint_state_to_traj_node,
                 ],
                 condition=UnlessCondition(real_grippers),
             ),
