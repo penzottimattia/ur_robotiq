@@ -279,7 +279,7 @@ def generate_launch_description():
             'tf_prefix': 'left_',
             'joint_state_topic': '/left_arm_controller/commands',
             'trajectory_topic': '/left_arm_controller/joint_trajectory',
-            'gripper_topic': '/left_gripper_controller/commands',
+            'gripper_topic': '/left_gripper_controller/joint_trajectory',
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
         }],
     )
@@ -293,7 +293,7 @@ def generate_launch_description():
             'tf_prefix': 'right_',
             'joint_state_topic': '/right_arm_controller/commands',
             'trajectory_topic': '/right_arm_controller/joint_trajectory',
-            'gripper_topic': '/right_gripper_controller/commands',
+            'gripper_topic': '/right_gripper_controller/joint_trajectory',
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
         }],
     )
