@@ -240,6 +240,31 @@ def generate_launch_description():
         ],
     )
 
+    # Force/torque bridge nodes (provide zeroing service and zeroed output)
+    left_ft_bridge = Node(
+        package='ur_robotiq',
+        executable='ft_bridge_node',
+        name='left_fts_bridge',
+        output='screen',
+        parameters=[{
+            'sensor_topic': 'left_fts_broadcaster/wrench',
+            'output_topic': 'left_fts_bridge/wrench',
+            'service_name': 'left_fts_bridge/reset_wrench',
+        }],
+    )
+
+    right_ft_bridge = Node(
+        package='ur_robotiq',
+        executable='ft_bridge_node',
+        name='right_fts_bridge',
+        output='screen',
+        parameters=[{
+            'sensor_topic': 'right_fts_broadcaster/wrench',
+            'output_topic': 'right_fts_bridge/wrench',
+            'service_name': 'right_fts_bridge/reset_wrench',
+        }],
+    )
+
     bimanual_setup_node = Node(
         package='ur_robotiq',
         executable='bimanual_setup_node',
@@ -368,6 +393,8 @@ def generate_launch_description():
         OpaqueFunction(function=launch_ros2_control),
         left_dashboard_client,
         right_dashboard_client,
+        left_ft_bridge,
+        right_ft_bridge,
         bimanual_setup_node,
         post_start_actions,
     ])
