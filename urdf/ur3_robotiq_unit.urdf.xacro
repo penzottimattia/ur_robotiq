@@ -6,10 +6,11 @@
 	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
 
 	<xacro:arg name="instantiate_unit" default="false"/>
+	<xacro:arg name="gripper_closed_position" default="0.8"/>
 	<xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
 	<xacro:property name="default_initial_positions" value="${xacro.load_yaml('$(find ur_description)/config/initial_positions.yaml')}"/>
 
-	<xacro:macro name="robotiq_minimal_ros2_control" params="name prefix use_fake_hardware fake_sensor_commands com_port">
+	<xacro:macro name="robotiq_minimal_ros2_control" params="name prefix use_fake_hardware fake_sensor_commands com_port gripper_closed_position">
 		<ros2_control name="${name}" type="system">
 			<hardware>
 				<xacro:if value="${use_fake_hardware}">
@@ -19,10 +20,10 @@
 				</xacro:if>
 				<xacro:unless value="${use_fake_hardware}">
 					<plugin>robotiq_driver/RobotiqGripperHardwareInterface</plugin>
-					<param name="gripper_closed_position">0.7929</param>
+					<param name="gripper_closed_position">${gripper_closed_position}</param>
 					<param name="COM_port">${com_port}</param>
-					<param name="gripper_speed_multiplier">1.0</param>
-					<param name="gripper_force_multiplier">0.5</param>
+					<param name="gripper_speed_multiplier">0.01</param>
+					<param name="gripper_force_multiplier">0.01</param>
 				</xacro:unless>
 			</hardware>
 
@@ -55,7 +56,7 @@
 		tool_rx_idle_chars:='1.5' tool_tx_idle_chars:='3.5'
 		tool_device_name:='/tmp/ttyUR' tool_tcp_port:='54321'
 		gripper_name:='gripper' gripper_use_fake_hardware:='true'
-		gripper_fake_sensor_commands:='false' gripper_com_port:='/tmp/ttyUR'
+		gripper_fake_sensor_commands:='false' gripper_com_port:='/tmp/ttyUR' gripper_closed_position:='0.8'
 		use_calib_probe:='false'
 	">
 		<xacro:ur_robot
@@ -118,7 +119,8 @@
 			prefix="${tf_prefix}"
 			use_fake_hardware="${gripper_use_fake_hardware}"
 			fake_sensor_commands="${gripper_fake_sensor_commands}"
-			com_port="${gripper_com_port}"/>
+			com_port="${gripper_com_port}"
+			gripper_closed_position="${gripper_closed_position}"/>
 
 		<xacro:if value="${use_calib_probe}">
 			<link name="${tf_prefix}probe_link">
