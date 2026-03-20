@@ -35,6 +35,9 @@ setup(
             'hand_eye_calibration = ur_robotiq.hand_eye_calibration:main',
             'joint_state_to_trajectory_node = ur_robotiq.joint_state_to_trajectory_node:main',
             'ft_bridge_node = ur_robotiq.ft_bridge_node:main',
+            'spawn_mesh_marker = ur_robotiq.spawn_mesh_marker:main',
+            'static_camera_tf = ur_robotiq.static_tf_broadcaster:main',
+            'tf_pose_transformer = ur_robotiq.tf_pose_transformer:main',
         ],
     },
 )

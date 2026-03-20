@@ -61,13 +61,12 @@ class HandEyeCalibrator(Node):
         super().__init__('hand_eye_calibrator')
 
         self.declare_parameter('base_frame', 'base')
-        self.declare_parameter('camera_frame', 'camera')
+        self.declare_parameter('camera_frame', 'camera_color_optical_frame')
         self.declare_parameter('probe_frame', 'probe')
         self.declare_parameter('pose_topic', '/object_pose')
-        self.declare_parameter('samples', 100)
+        self.declare_parameter('samples', 1000)
         self.declare_parameter('output_file', os.path.join(
             os.path.dirname(__file__), '..', 'config', 'camera_to_base.yaml'))
-        self.declare_parameter('timeout_s', 1.0)
 
         self.base_frame = self.get_parameter('base_frame').get_parameter_value().string_value
         self.camera_frame = self.get_parameter('camera_frame').get_parameter_value().string_value
@@ -75,7 +74,6 @@ class HandEyeCalibrator(Node):
         self.pose_topic = self.get_parameter('pose_topic').get_parameter_value().string_value
         self.samples = int(self.get_parameter('samples').get_parameter_value().integer_value)
         self.output_file = self.get_parameter('output_file').get_parameter_value().string_value
-        self.timeout_s = float(self.get_parameter('timeout_s').get_parameter_value().double_value)
 
         self.get_logger().info(f'HandEyeCalibrator: base_frame={self.base_frame}, camera_frame={self.camera_frame}, probe_frame={self.probe_frame}, pose_topic={self.pose_topic}, samples={self.samples}')
 
@@ -108,6 +106,8 @@ class HandEyeCalibrator(Node):
             return
 
         self.get_logger().info('Press any key to interrupt sampling and compute transform')
+        self.get_logger().info('Starting sampling in 3 seconds...')
+        time.sleep(3)
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
         try:
