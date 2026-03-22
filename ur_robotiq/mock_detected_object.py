@@ -2,7 +2,7 @@
 """Publish a mocked grasped object pose following an end-effector frame with jitter.
 
 Parameters (ROS params):
- - end_effector_frame (string): frame to follow (default 'ee_link')
+ - frame (string): frame to follow (default 'ee_link')
  - target_frame (string): frame to publish the pose in (default 'world')
  - output_topic (string): topic to publish PoseStamped to (default '/mock_grasped_object/pose')
  - rate (float): publish rate in Hz (default 10.0)
@@ -26,18 +26,18 @@ from tf_transformations import quaternion_from_euler, quaternion_multiply
 
 class MockGraspedObject(Node):
     def __init__(self):
-        super().__init__('mock_grasped_object')
+        super().__init__('mock_detected_object')
 
-        self.declare_parameter('end_effector_frame', 'ee_link')
+        self.declare_parameter('frame', 'ee_link')
         self.declare_parameter('target_frame', 'world')
-        self.declare_parameter('output_topic', '/mock_grasped_object/pose')
+        self.declare_parameter('output_topic', '/mock_detected_object/pose')
         self.declare_parameter('rate', 10.0)
         self.declare_parameter('pos_jitter_std', 0.001)
         self.declare_parameter('rot_jitter_std', 0.01)
         self.declare_parameter('offset_xyz', [0.0, 0.0, 0.0])
         self.declare_parameter('offset_rpy', [0.0, 0.0, 0.0])
 
-        self.end_effector_frame = self.get_parameter('end_effector_frame').get_parameter_value().string_value
+        self.frame = self.get_parameter('frame').get_parameter_value().string_value
         self.target_frame = self.get_parameter('target_frame').get_parameter_value().string_value
         self.output_topic = self.get_parameter('output_topic').get_parameter_value().string_value
         self.rate = float(self.get_parameter('rate').get_parameter_value().double_value)
@@ -56,11 +56,11 @@ class MockGraspedObject(Node):
         timer_period = 1.0 / max(0.001, self.rate)
         self.create_timer(timer_period, self._publish_pose)
 
-        self.get_logger().info(f'Publishing mocked object poses to "{self.output_topic}" following frame "{self.end_effector_frame}"')
+        self.get_logger().info(f'Publishing mocked object poses to "{self.output_topic}" following frame "{self.frame}"')
 
     def _make_offset_pose(self) -> PoseStamped:
         p = PoseStamped()
-        p.header.frame_id = self.end_effector_frame
+        p.header.frame_id = self.frame
         p.pose.position.x = float(self.offset_xyz[0])
         p.pose.position.y = float(self.offset_xyz[1])
         p.pose.position.z = float(self.offset_xyz[2])
@@ -104,7 +104,7 @@ class MockGraspedObject(Node):
             out.header.frame_id = self.target_frame
             self.pub.publish(out)
         except Exception as e:
-            self.get_logger().warning(f'Could not transform pose from {self.end_effector_frame} to {self.target_frame}: {e}')
+            self.get_logger().warning(f'Could not transform pose from {self.frame} to {self.target_frame}: {e}')
 
 
 def main(args=None):

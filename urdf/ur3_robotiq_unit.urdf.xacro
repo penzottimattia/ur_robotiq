@@ -105,6 +105,7 @@
 			name="${gripper_name}"
 			prefix="${tf_prefix}"
 			parent="${tf_prefix}gripper_mount_link"
+			gripper_closed_position="${gripper_closed_position}"
 			include_ros2_control="false"
 			use_fake_hardware="${gripper_use_fake_hardware}"
 			mock_sensor_commands="${gripper_fake_sensor_commands}"

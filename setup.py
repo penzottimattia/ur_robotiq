@@ -38,7 +38,7 @@ setup(
             'spawn_mesh_marker = ur_robotiq.spawn_mesh_marker:main',
             'static_camera_tf = ur_robotiq.static_tf_broadcaster:main',
             'tf_pose_transformer = ur_robotiq.tf_pose_transformer:main',
-            'mock_grasped_object = ur_robotiq.mock_grasped_object:main',
+            'mock_detected_object = ur_robotiq.mock_detected_object:main',
         ],
     },
 )
