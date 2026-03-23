@@ -31,6 +31,7 @@ class MockGraspedObject(Node):
         self.declare_parameter('frame', 'ee_link')
         self.declare_parameter('target_frame', 'world')
         self.declare_parameter('output_topic', '/mock_detected_object/pose')
+        self.declare_parameter('gt_topic', '/mock_detected_object/gt_pose')
         self.declare_parameter('rate', 10.0)
         self.declare_parameter('pos_jitter_std', 0.001)
         self.declare_parameter('rot_jitter_std', 0.01)
@@ -40,6 +41,7 @@ class MockGraspedObject(Node):
         self.frame = self.get_parameter('frame').get_parameter_value().string_value
         self.target_frame = self.get_parameter('target_frame').get_parameter_value().string_value
         self.output_topic = self.get_parameter('output_topic').get_parameter_value().string_value
+        self.gt_topic = self.get_parameter('gt_topic').get_parameter_value().string_value
         self.rate = float(self.get_parameter('rate').get_parameter_value().double_value)
         self.pos_jitter_std = float(self.get_parameter('pos_jitter_std').get_parameter_value().double_value)
         self.rot_jitter_std = float(self.get_parameter('rot_jitter_std').get_parameter_value().double_value)
@@ -52,11 +54,13 @@ class MockGraspedObject(Node):
         time.sleep(1)  # give some time for TF buffer to fill
 
         self.pub = self.create_publisher(PoseStamped, self.output_topic, 10)
+        self.gt_pub = self.create_publisher(PoseStamped, self.gt_topic, 10)
 
         timer_period = 1.0 / max(0.001, self.rate)
         self.create_timer(timer_period, self._publish_pose)
 
         self.get_logger().info(f'Publishing mocked object poses to "{self.output_topic}" following frame "{self.frame}"')
+        self.get_logger().info(f'Publishing ground truth poses to "{self.gt_topic}"')
 
     def _make_offset_pose(self) -> PoseStamped:
         p = PoseStamped()
@@ -99,7 +103,15 @@ class MockGraspedObject(Node):
             req.header.stamp = rclpy.time.Time().to_msg()
             transformed = self.tf_buffer.transform(req, self.target_frame, timeout=rclpy.duration.Duration(seconds=0.1))
 
-            transformed.header.stamp = self.get_clock().now().to_msg()
+            # Publish ground truth (no jitter)
+            gt_pose = PoseStamped()
+            gt_pose.header = transformed.header
+            gt_pose.pose = transformed.pose
+            gt_pose.header.stamp = self.get_clock().now().to_msg()
+            gt_pose.header.frame_id = self.target_frame
+            self.gt_pub.publish(gt_pose)
+
+            # Publish noisy pose
             out = self._add_jitter(transformed)
             out.header.frame_id = self.target_frame
             self.pub.publish(out)

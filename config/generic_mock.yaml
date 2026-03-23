@@ -15,6 +15,7 @@ mocks:
     offset_xyz: [0.0, -0.04, 0.16]
     offset_rpy: [0.0, 0.0, 3.14]
     output_topic: /object_pose/vial
+    gt_topic: /object_pose/vial_gt
 
   - name: rack_mock
     frame: world
@@ -23,6 +24,7 @@ mocks:
     offset_xyz: [-0.3, 0.4, 0.04]
     offset_rpy: [0.0, 0.0, 0.0]
     output_topic: /object_pose/rack_yellow
+    gt_topic: /object_pose/rack_yellow_gt
 
 objects:
   - name: rack_yellow
@@ -31,9 +33,21 @@ objects:
     frame: world
     scale: 1.0
 
+  - name: rack_yellow_gt
+    mesh: /ws/src/ur_robotiq/object/rack_yellow/rack_yellow.obj
+    pose_topic: /object_pose/rack_yellow_gt
+    frame: world
+    scale: 1.0
+
   - name: vial
     mesh: /ws/src/ur_robotiq/object/vial/vial.obj
     pose_topic: /object_pose/vial
+    frame: world
+    scale: 1.0
+
+  - name: vial_gt
+    mesh: /ws/src/ur_robotiq/object/vial/vial.obj
+    pose_topic: /object_pose/vial_gt
     frame: world
     scale: 1.0
 

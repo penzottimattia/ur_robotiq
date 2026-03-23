@@ -48,9 +48,10 @@ class MeshMarkerNode(Node):
         self.scale = scale
         self.latest_pose: Optional[PoseStamped] = None
         self._logged_missing = False
+        
+        pub_name = pose_topic.replace('/', '_').strip('_')
 
-        import uuid
-        self.pub = self.create_publisher(Marker, f'visualization_marker_{str(uuid.uuid4())[:8]}', 10)
+        self.pub = self.create_publisher(Marker, f'{pub_name}', 10)
         self.sub = self.create_subscription(PoseStamped, pose_topic, self._pose_cb, 10)
         self.timer = self.create_timer(0.1, self.publish_marker)
         self.get_logger().info(f'Waiting for PoseStamped on "{pose_topic}" to publish mesh {self.mesh_resource}')
@@ -79,10 +80,15 @@ class MeshMarkerNode(Node):
         m.scale.x = float(self.scale)
         m.scale.y = float(self.scale)
         m.scale.z = float(self.scale)
-        m.color.r = 0.8
-        m.color.g = 0.8
-        m.color.b = 0.8
+
+        # randomize color a bit for better visibility if multiple markers are present
+        import random
+        rng = random.Random(self.mesh_resource)  # deterministic color per frame
+        m.color.r = rng.uniform(0.2, 1.0)
+        m.color.g = rng.uniform(0.2, 1.0)
+        m.color.b = rng.uniform(0.2, 1.0)
         m.color.a = 1.0
+
         m.lifetime.sec = 0
         m.lifetime.nanosec = 0
         self.pub.publish(m)

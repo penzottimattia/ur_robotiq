@@ -70,6 +70,7 @@ def _launch_from_config(context, *args, **kwargs):
             'frame': m.get('frame', 'ee_link'),
             'target_frame': m.get('target_frame', 'world'),
             'output_topic': m.get('output_topic', '/mock_detected_object/pose'),
+            'gt_topic': m.get('gt_topic', '/mock_detected_object/gt_pose'),
             'rate': float(m.get('rate', 10.0)),
             'pos_jitter_std': float(m.get('pos_jitter_std', 0.001)),
             'rot_jitter_std': float(m.get('rot_jitter_std', 0.01)),
