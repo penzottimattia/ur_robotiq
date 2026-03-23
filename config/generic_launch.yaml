@@ -25,8 +25,8 @@ objects:
 transforms:
   - input_topic: /object_pose/tube_white
     output_topic: /object_detection/vial
-    target_frame: camera_color_optical_frame
+    target_frame: world
 
   - input_topic: /object_pose/rack_yellow
     output_topic: /object_detection/rack_yellow
-    target_frame: camera_color_optical_frame
+    target_frame: world
