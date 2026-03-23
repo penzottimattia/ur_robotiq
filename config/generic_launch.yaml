@@ -4,7 +4,6 @@
 # - rviz: optional rviz configuration file path
 
 rviz:
-  # optional: absolute path to a .rviz2 config file. Leave empty to skip rviz
   config: ''
 
 static_camera_tf:

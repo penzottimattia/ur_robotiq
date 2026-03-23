@@ -22,14 +22,13 @@ def _launch_from_config(context, *args, **kwargs):
     # rviz (optional)
     rviz_cfg = cfg.get('rviz', {})
     rviz_config = rviz_cfg.get('config', '') if isinstance(rviz_cfg, dict) else ''
-    if rviz_config:
-        nodes.append(Node(
-            package='rviz2',
-            executable='rviz2',
-            name='rviz2',
-            arguments=['-d', rviz_config],
-            output='screen',
-        ))
+    nodes.append(Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', rviz_config],
+        output='screen',
+    ))
 
     # static camera TF node
     static_cfg = cfg.get('static_camera_tf', {})
@@ -47,20 +46,43 @@ def _launch_from_config(context, *args, **kwargs):
         if not mesh:
             continue
         pose_topic = obj.get('pose_topic', '/mesh_pose')
-        frame = obj.get('frame', None)
-        scale = obj.get('scale', None)
-        args = [mesh, '--pose-topic', pose_topic]
-        if frame:
-            args += ['--frame', frame]
-        if scale is not None:
-            args += ['--scale', str(scale)]
+        frame = obj.get('frame', '')
+        scale = obj.get('scale', 1.0)
+
+        params = [{
+            'mesh': mesh,
+            'pose_topic': pose_topic,
+            'frame': frame,
+            'scale': float(scale),
+        }]
 
         nodes.append(Node(
             package='ur_robotiq',
             executable='spawn_mesh_marker',
             name=f"spawn_{obj.get('name', os.path.basename(mesh))}",
             output='screen',
-            arguments=args,
+            parameters=params,
+        ))
+
+    # mock detected objects (publish mocked poses following frames)
+    for i, m in enumerate(cfg.get('mocks', []) or []):
+        params = [{
+            'frame': m.get('frame', 'ee_link'),
+            'target_frame': m.get('target_frame', 'world'),
+            'output_topic': m.get('output_topic', '/mock_detected_object/pose'),
+            'rate': float(m.get('rate', 10.0)),
+            'pos_jitter_std': float(m.get('pos_jitter_std', 0.001)),
+            'rot_jitter_std': float(m.get('rot_jitter_std', 0.01)),
+            'offset_xyz': m.get('offset_xyz', [0.0, 0.0, 0.0]),
+            'offset_rpy': m.get('offset_rpy', [0.0, 0.0, 0.0]),
+        }]
+
+        nodes.append(Node(
+            package='ur_robotiq',
+            executable='mock_detected_object',
+            name=f"mock_detected_object_{i}",
+            output='screen',
+            parameters=params,
         ))
 
     # tf pose transformers

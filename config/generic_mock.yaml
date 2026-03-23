@@ -1,0 +1,47 @@
+# Example mock configuration: starts static camera TF, mocked detected objects,
+# spawn markers from the mocked topics, and transformers.
+
+rviz:
+  config: ''
+
+static_camera_tf:
+  enabled: true
+
+mocks:
+  - name: vial_mock
+    frame: right_tool0
+    target_frame: world
+    rate: 40.0
+    offset_xyz: [0.0, -0.04, 0.16]
+    offset_rpy: [0.0, 0.0, 3.14]
+    output_topic: /object_pose/vial
+
+  - name: rack_mock
+    frame: world
+    target_frame: world
+    rate: 40.0
+    offset_xyz: [-0.3, 0.4, 0.04]
+    offset_rpy: [0.0, 0.0, 0.0]
+    output_topic: /object_pose/rack_yellow
+
+objects:
+  - name: rack_yellow
+    mesh: /ws/src/ur_robotiq/object/rack_yellow/rack_yellow.obj
+    pose_topic: /object_pose/rack_yellow
+    frame: world
+    scale: 1.0
+
+  - name: vial
+    mesh: /ws/src/ur_robotiq/object/vial/vial.obj
+    pose_topic: /object_pose/vial
+    frame: world
+    scale: 1.0
+
+transforms:
+  - input_topic: /object_pose/rack_yellow
+    output_topic: /object_detection/rack_yellow
+    target_frame: world
+
+  - input_topic: /object_pose/vial
+    output_topic: /object_detection/vial
+    target_frame: world

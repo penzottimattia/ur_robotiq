@@ -8,7 +8,6 @@ By default the marker will use the incoming message's header.frame_id;
 pass `--frame` to override that behavior.
 """
 import os
-import argparse
 import rclpy
 from rclpy.node import Node
 from visualization_msgs.msg import Marker
@@ -18,19 +17,43 @@ from typing import Optional
 
 
 class MeshMarkerNode(Node):
-    def __init__(self, mesh_resource: str, pose_topic: str = '/mesh_pose', frame_override: Optional[str] = None, scale: float = 1.0):
+    def __init__(self):
         super().__init__('spawn_mesh_marker')
-        self.mesh_resource = mesh_resource
-        self.frame_override = frame_override
+
+        # Declare parameters for ros2 run --ros-args -p <name>:=<value>
+        self.declare_parameter('mesh', '')
+        self.declare_parameter('pose_topic', '/mesh_pose')
+        self.declare_parameter('frame', '')
+        self.declare_parameter('scale', 1.0)
+
+        mesh_path = self.get_parameter('mesh').get_parameter_value().string_value
+        pose_topic = self.get_parameter('pose_topic').get_parameter_value().string_value
+        frame_override = self.get_parameter('frame').get_parameter_value().string_value
+        scale = float(self.get_parameter('scale').get_parameter_value().double_value)
+
+        if not mesh_path:
+            self.get_logger().error('Parameter "mesh" is required and must be an absolute path to the mesh file')
+            raise SystemExit('mesh parameter required')
+
+        if not os.path.isabs(mesh_path):
+            self.get_logger().error('mesh path must be absolute (provide an absolute filesystem path)')
+            raise SystemExit('mesh path must be absolute')
+
+        if not os.path.exists(mesh_path):
+            self.get_logger().error(f'mesh not found: {mesh_path}')
+            raise SystemExit(f'mesh not found: {mesh_path}')
+
+        self.mesh_resource = f'file://{os.path.abspath(mesh_path)}'
+        self.frame_override = frame_override if frame_override else None
         self.scale = scale
         self.latest_pose: Optional[PoseStamped] = None
         self._logged_missing = False
 
-        import time
-        self.pub = self.create_publisher(Marker, f'visualization_marker_{int(time.time())}', 10)
+        import uuid
+        self.pub = self.create_publisher(Marker, f'visualization_marker_{str(uuid.uuid4())[:8]}', 10)
         self.sub = self.create_subscription(PoseStamped, pose_topic, self._pose_cb, 10)
         self.timer = self.create_timer(0.1, self.publish_marker)
-        self.get_logger().info(f'Waiting for PoseStamped on "{pose_topic}" to publish mesh {mesh_resource}')
+        self.get_logger().info(f'Waiting for PoseStamped on "{pose_topic}" to publish mesh {self.mesh_resource}')
 
     def _pose_cb(self, msg: PoseStamped):
         self.latest_pose = msg
@@ -65,23 +88,14 @@ class MeshMarkerNode(Node):
         self.pub.publish(m)
 
 
-def main(argv=None):
-    parser = argparse.ArgumentParser(description='Spawn a mesh as a visualization Marker using a PoseStamped topic')
-    parser.add_argument('mesh', help='Absolute path to the mesh file (e.g. /abs/path/triangle.obj). REQUIRED')
-    parser.add_argument('--pose-topic', default='/mesh_pose', help='PoseStamped topic to subscribe to')
-    parser.add_argument('--frame', default=None, help='Optional frame override for the published marker')
-    parser.add_argument('--scale', type=float, default=1.0, help='Uniform scale for the mesh')
-    args = parser.parse_args(argv)
-    mesh_path = args.mesh
-    if not os.path.isabs(mesh_path):
-        raise SystemExit('mesh path must be absolute (provide an absolute filesystem path)')
-    if not os.path.exists(mesh_path):
-        raise SystemExit(f'mesh not found: {mesh_path}')
+def main(args=None):
+    rclpy.init(args=args)
+    try:
+        node = MeshMarkerNode()
+    except SystemExit:
+        rclpy.shutdown()
+        raise
 
-    mesh_resource = f'file://{os.path.abspath(mesh_path)}'
-
-    rclpy.init()
-    node = MeshMarkerNode(mesh_resource=mesh_resource, pose_topic=args.pose_topic, frame_override=args.frame, scale=args.scale)
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
