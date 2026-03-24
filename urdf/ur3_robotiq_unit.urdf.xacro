@@ -6,7 +6,7 @@
 	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
 
 	<xacro:arg name="instantiate_unit" default="false"/>
-	<xacro:arg name="gripper_closed_position" default="0.8"/>
+	<xacro:arg name="gripper_closed_position" default="0.82"/>
 	<xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
 	<xacro:property name="default_initial_positions" value="${xacro.load_yaml('$(find ur_description)/config/initial_positions.yaml')}"/>
 
