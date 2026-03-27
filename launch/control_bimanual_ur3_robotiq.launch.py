@@ -251,6 +251,7 @@ def generate_launch_description():
             'output_topic': 'left_fts_bridge/wrench',
             'service_name': 'left_fts_bridge/reset_wrench',
         }],
+        condition=UnlessCondition(use_mock_hardware)
     )
 
     right_ft_bridge = Node(
@@ -263,6 +264,7 @@ def generate_launch_description():
             'output_topic': 'right_fts_bridge/wrench',
             'service_name': 'right_fts_bridge/reset_wrench',
         }],
+        condition=UnlessCondition(use_mock_hardware)
     )
 
     bimanual_setup_node = Node(

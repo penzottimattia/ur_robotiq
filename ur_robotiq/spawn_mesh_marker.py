@@ -49,7 +49,7 @@ class MeshMarkerNode(Node):
         self.latest_pose: Optional[PoseStamped] = None
         self._logged_missing = False
         
-        pub_name = pose_topic.replace('/', '_').strip('_')
+        pub_name = f'mesh_marker_{os.path.basename(mesh_path)}'.removesuffix('.obj')
 
         self.pub = self.create_publisher(Marker, f'{pub_name}', 10)
         self.sub = self.create_subscription(PoseStamped, pose_topic, self._pose_cb, 10)
