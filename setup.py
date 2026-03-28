@@ -39,6 +39,7 @@ setup(
             'static_camera_tf = ur_robotiq.static_tf_broadcaster:main',
             'tf_pose_transformer = ur_robotiq.tf_pose_transformer:main',
             'mock_detected_object = ur_robotiq.mock_detected_object:main',
+            'usb_camera_node = ur_robotiq.usb_camera_node:main',
         ],
     },
 )
