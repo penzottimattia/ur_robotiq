@@ -19,17 +19,29 @@ class USBCameraNode(Node):
         # node will first perform a centered square crop on the frame and then
         # optionally resize to `output_size` (square).
         self.declare_parameter('output_size', 0)
+        # image encoding to publish: 'bgr8' or 'rgb8'
+        self.declare_parameter('encoding', 'rgb8')
 
         device = self.get_parameter('device').get_parameter_value().integer_value
         topic = self.get_parameter('topic').get_parameter_value().string_value
         fps = float(self.get_parameter('fps').get_parameter_value().double_value)
         self.output_size = int(self.get_parameter('output_size').get_parameter_value().integer_value)
+        self.encoding = self.get_parameter('encoding').get_parameter_value().string_value
 
         self.pub = self.create_publisher(Image, topic, 10)
         self.bridge = CvBridge()
 
         # video capture
         self.cap = cv2.VideoCapture(device)
+
+        # ensure the device opened correctly; if not, fail fast
+        if not self.cap.isOpened():
+            self.get_logger().error(f'Failed to open video device {device}')
+            try:
+                self.cap.release()
+            except Exception:
+                pass
+            raise RuntimeError(f'Cannot open video device {device}')
 
         self._frame_lock = threading.Lock()
         self._latest_frame = None
@@ -75,7 +87,9 @@ class USBCameraNode(Node):
             frame = cv2.resize(frame, (self.output_size, self.output_size), interpolation=cv2.INTER_LINEAR)
 
         try:
-            msg = self.bridge.cv2_to_imgmsg(frame, encoding='bgr8')
+            if getattr(self, 'encoding', 'bgr8') == 'rgb8':
+                frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            msg = self.bridge.cv2_to_imgmsg(frame, encoding=self.encoding)
         except Exception as e:
             self.get_logger().error(f'cv_bridge conversion failed: {e}')
             return
@@ -96,13 +110,25 @@ class USBCameraNode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    node = USBCameraNode()
+    node = None
+    try:
+        node = USBCameraNode()
+    except Exception as e:
+        try:
+            logger = rclpy.logging.get_logger('usb_camera_node')
+            logger.error(f'Failed to start USB camera node: {e}')
+        except Exception:
+            print(f'Failed to start USB camera node: {e}')
+        rclpy.shutdown()
+        return
+
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
-        node.destroy_node()
+        if node is not None:
+            node.destroy_node()
         rclpy.shutdown()
 
 

@@ -30,3 +30,23 @@ transforms:
   - input_topic: /object_pose/rack_yellow
     output_topic: /object_detection/rack_yellow
     target_frame: world
+
+# Camera nodes to launch (USB cameras). Each entry will start a
+# `usb_camera_node` from this package with the provided parameters.
+cameras:
+  - name: usb0
+    device: 0
+    topic: /camera/image_raw
+    fps: 10.0
+    output_size: 0
+    encoding: rgb8
+    enabled: true
+
+  # Example additional camera
+  # - name: usb1
+  #   device: 1
+  #   topic: /camera_left/image_raw
+  #   fps: 10.0
+  #   output_size: 128
+  #   encoding: rgb8
+  #   enabled: false

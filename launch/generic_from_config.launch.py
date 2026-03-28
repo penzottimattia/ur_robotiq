@@ -86,6 +86,28 @@ def _launch_from_config(context, *args, **kwargs):
             parameters=params,
         ))
 
+    # camera nodes
+    for i, c in enumerate(cfg.get('cameras', []) or []):
+        if not c.get('enabled', True):
+            continue
+
+        params = [{
+            'device': int(c.get('device', 0)),
+            'topic': c.get('topic', '/camera/image_raw'),
+            'fps': float(c.get('fps', 10.0)),
+            'output_size': int(c.get('output_size', 0)),
+        }]
+
+        name = c.get('name', f'usb_camera_{i}')
+
+        nodes.append(Node(
+            package='ur_robotiq',
+            executable='usb_camera_node',
+            name=name,
+            output='screen',
+            parameters=params,
+        ))
+
     # tf pose transformers
     for i, t in enumerate(cfg.get('transforms', []) or []):
         params = [{
