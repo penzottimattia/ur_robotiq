@@ -29,7 +29,6 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'bimanual_setup_node = ur_robotiq.bimanual_setup_node:main',
             'export_unit_assets = ur_robotiq.export_unit_assets:main',
             'compute_camera_to_base = ur_robotiq.compute_camera_to_base:main',
             'hand_eye_calibration = ur_robotiq.hand_eye_calibration:main',

@@ -66,27 +66,6 @@ Useful launch arguments:
 - `controllers_file:=<path/to/controllers.yaml>`
 - `base_poses_file:=<path/to/yaml>`
 
-### 2b) Run setup node directly
-
-This node can set up both robots through the UR dashboard interface by performing:
-
-1. remote-control check
-2. power on
-3. brake release
-4. ensure target program is loaded (if specified)
-5. play program
-
-Run it directly:
-
-```bash
-ros2 run ur_robotiq bimanual_setup_node \
-  --ros-args \
-  -p left_namespace:=left_ur \
-  -p right_namespace:=right_ur \
-  -p left_program:=/programs/left.urp \
-  -p right_program:=/programs/right.urp
-```
-
 Important parameters:
 
 - `left_namespace`, `right_namespace`
