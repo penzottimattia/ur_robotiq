@@ -85,8 +85,8 @@ Useful launch arguments:
 
 - `left_robot_ip:=192.168.0.10`
 - `right_robot_ip:=192.168.0.11`
-- `left_target_filename:=/ws/src/ur_robotiq/config/left_ur3_calibration.yaml`
-- `right_target_filename:=/ws/src/ur_robotiq/config/right_ur3_calibration.yaml`
+- `left_target_filename:=/ws/src/ur_robotiq/config/left_ur_calibration.yaml`
+- `right_target_filename:=/ws/src/ur_robotiq/config/right_ur_calibration.yaml`
 - `run_left:=true|false`
 - `run_right:=true|false`
 
@@ -101,15 +101,15 @@ ros2 run ur_robotiq export_unit_assets \
   --output-urdf-name unit.urdf \
   --xacro-args ur_type:=ur3 \
   --calibration-files \
-    /ws/src/ur_robotiq/config/left_ur3_calibration.yaml \
-    /ws/src/ur_robotiq/config/right_ur3_calibration.yaml \
+    /ws/src/ur_robotiq/config/left_ur_calibration.yaml \
+    /ws/src/ur_robotiq/config/right_ur_calibration.yaml \
   --overwrite
 ```
 
 Output layout:
 
-- `/tmp/ur3_unit_export/unit_left_ur3_calibration.urdf`
-- `/tmp/ur3_unit_export/unit_right_ur3_calibration.urdf`
+- `/tmp/ur3_unit_export/unit_left_ur_calibration.urdf`
+- `/tmp/ur3_unit_export/unit_right_ur_calibration.urdf`
 - `/tmp/ur3_unit_export/meshes/...` (copied visual/collision assets)
 
 Notes:

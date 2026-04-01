@@ -12,7 +12,7 @@ static_camera_tf:
 objects:
   - name: vial
     mesh: /ws/src/ur_robotiq/object/vial/vial.obj
-    pose_topic: /object_pose/tube_white
+    pose_topic: /object_pose/white_vial
     frame: camera_color_optical_frame
     scale: 1.0
 
@@ -23,7 +23,7 @@ objects:
     scale: 1.0
 
 transforms:
-  - input_topic: /object_pose/tube_white
+  - input_topic: /object_pose/white_vial
     output_topic: /object_detection/vial
     target_frame: world
 
@@ -35,10 +35,10 @@ transforms:
 # `usb_camera_node` from this package with the provided parameters.
 cameras:
   - name: usb0
-    device: 0
+    device: 13
     topic: /camera/image_raw
     fps: 10.0
-    output_size: 0
+    output_size: 224
     encoding: rgb8
     enabled: true
 
