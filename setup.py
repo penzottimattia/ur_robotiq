@@ -40,6 +40,7 @@ setup(
             'mock_detected_object = ur_robotiq.mock_detected_object:main',
             'usb_camera_node = ur_robotiq.usb_camera_node:main',
             'gello_offset_node = ur_robotiq.gello_offset_node:main',
+            'gello_publisher = ur_robotiq.gello_publisher:main',
         ],
     },
 )

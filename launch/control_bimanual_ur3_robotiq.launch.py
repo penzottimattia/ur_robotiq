@@ -1,5 +1,5 @@
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction, ExecuteProcess
+from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.actions import Node
@@ -27,6 +27,11 @@ def generate_launch_description():
         'run_setup_node',
         default_value='false',
         description='Run bimanual dashboard setup sequence (power on, release brakes, load program, play)',
+    )
+    use_gello_arg = DeclareLaunchArgument(
+        'use_gello',
+        default_value='false',
+        description='Launch GELLO publishers and offset nodes for teleoperation',
     )
     left_program_arg = DeclareLaunchArgument(
         'left_program',
@@ -56,6 +61,16 @@ def generate_launch_description():
     right_tool_tcp_port_arg = DeclareLaunchArgument(
         'right_tool_tcp_port', default_value='54322',
         description='TCP port for right UR tool communication bridge',
+    )
+    left_gello_port_arg = DeclareLaunchArgument(
+        'left_gello_port',
+        default_value='/dev/ttyUSB1',
+        description='Serial port for left GELLO (used only when use_gello=true)',
+    )
+    right_gello_port_arg = DeclareLaunchArgument(
+        'right_gello_port',
+        default_value='/dev/ttyUSB2',
+        description='Serial port for right GELLO (used only when use_gello=true)',
     )
     base_poses_file_arg = DeclareLaunchArgument(
         'base_poses_file',
@@ -302,6 +317,7 @@ def generate_launch_description():
         executable='joint_state_to_trajectory_node',
         name='left_joint_state_to_trajectory_node',
         output='screen',
+        condition=UnlessCondition(use_gello),
         parameters=[{
             'tf_prefix': 'left_',
             'joint_state_topic': '/left_arm_controller/commands',
@@ -316,6 +332,7 @@ def generate_launch_description():
         executable='joint_state_to_trajectory_node',
         name='right_joint_state_to_trajectory_node',
         output='screen',
+        condition=UnlessCondition(use_gello),
         parameters=[{
             'tf_prefix': 'right_',
             'joint_state_topic': '/right_arm_controller/commands',
@@ -323,6 +340,25 @@ def generate_launch_description():
             'gripper_topic': '/right_gripper_controller/joint_trajectory',
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
         }],
+    )
+
+    # True when using GELLO (teleop) mode
+    use_gello = PythonExpression([
+        "'", LaunchConfiguration('use_gello'), "' == 'true'",
+    ])
+
+    # Gello launch (includes GELLO publishers and offset nodes)
+    gello_launch = IncludeLaunchDescription(
+        PathJoinSubstitution([
+            FindPackageShare('ur_robotiq'),
+            'launch',
+            'gello_offset_bimanual.launch.py',
+        ]),
+        condition=IfCondition(use_gello),
+        launch_arguments=[
+            ('left_gello_port', LaunchConfiguration('left_gello_port')),
+            ('right_gello_port', LaunchConfiguration('right_gello_port')),
+        ],
     )
 
     # After ros2_control_node has started we need to activate hardware gripper components
@@ -352,6 +388,8 @@ def generate_launch_description():
                     bimanual_controller_spawner,
                     left_joint_state_to_traj_node,
                     right_joint_state_to_traj_node,
+                    # Launch GELLO after controllers are spawned for real grippers
+                    gello_launch,
                 ],
                 condition=IfCondition(real_grippers),
             ),
@@ -364,6 +402,8 @@ def generate_launch_description():
                     bimanual_controller_spawner,
                     left_joint_state_to_traj_node,
                     right_joint_state_to_traj_node,
+                    # Launch GELLO after controllers are spawned for mock modes
+                    gello_launch,
                 ],
                 condition=UnlessCondition(real_grippers),
             ),
@@ -376,6 +416,7 @@ def generate_launch_description():
         launch_dashboard_clients_arg,
         dashboard_receive_timeout_arg,
         run_setup_node_arg,
+        use_gello_arg,
         left_program_arg,
         right_program_arg,
         left_robot_ip_arg,
@@ -384,6 +425,8 @@ def generate_launch_description():
         right_tool_device_name_arg,
         left_tool_tcp_port_arg,
         right_tool_tcp_port_arg,
+        left_gello_port_arg,
+        right_gello_port_arg,
         base_poses_file_arg,
         controllers_file_arg,
         # include new calibration launch args

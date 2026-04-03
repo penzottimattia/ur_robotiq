@@ -69,12 +69,6 @@ left_arm_controller:
       - velocity
     constraints:
       goal_time: 0.0
-      left_shoulder_pan_joint: { trajectory: 0.2, goal: 0.1 }
-      left_shoulder_lift_joint: { trajectory: 0.2, goal: 0.1 }
-      left_elbow_joint: { trajectory: 0.2, goal: 0.1 }
-      left_wrist_1_joint: { trajectory: 0.2, goal: 0.1 }
-      left_wrist_2_joint: { trajectory: 0.2, goal: 0.1 }
-      left_wrist_3_joint: { trajectory: 0.2, goal: 0.1 }
     gains.left_shoulder_pan_joint: { p: 1.0, i: 0.0, d: 0.0, ff_velocity_scale: 0.0 }
     gains.left_shoulder_lift_joint: { p: 1.0, i: 0.0, d: 0.0, ff_velocity_scale: 0.0 }
     gains.left_elbow_joint: { p: 1.0, i: 0.0, d: 0.0, ff_velocity_scale: 0.0 }
@@ -98,12 +92,6 @@ right_arm_controller:
       - velocity
     constraints:
       goal_time: 0.0
-      right_shoulder_pan_joint: { trajectory: 0.2, goal: 0.1 }
-      right_shoulder_lift_joint: { trajectory: 0.2, goal: 0.1 }
-      right_elbow_joint: { trajectory: 0.2, goal: 0.1 }
-      right_wrist_1_joint: { trajectory: 0.2, goal: 0.1 }
-      right_wrist_2_joint: { trajectory: 0.2, goal: 0.1 }
-      right_wrist_3_joint: { trajectory: 0.2, goal: 0.1 }
     gains.right_shoulder_pan_joint: { p: 1.0, i: 0.0, d: 0.0, ff_velocity_scale: 0.0 }
     gains.right_shoulder_lift_joint: { p: 1.0, i: 0.0, d: 0.0, ff_velocity_scale: 0.0 }
     gains.right_elbow_joint: { p: 1.0, i: 0.0, d: 0.0, ff_velocity_scale: 0.0 }
