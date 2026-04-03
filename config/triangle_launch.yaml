@@ -1,0 +1,17 @@
+# Example configuration for generic launch that starts camera TF, spawn markers, and transformers
+# - objects: list of meshes to spawn as visualization markers
+# - transforms: list of input/output topic mappings for tf_pose_transformer
+# - rviz: optional rviz configuration file path
+
+rviz:
+  config: ''
+
+static_camera_tf:
+  enabled: true
+
+objects:
+  - name: triangle
+    mesh: /ws/src/ur_robotiq/object/triangle/triangle.obj
+    pose_topic: /object_pose
+    frame: camera_color_optical_frame
+    scale: 1.0

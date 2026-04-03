@@ -312,6 +312,11 @@ def generate_launch_description():
         output='screen',
     )
 
+    # True when using GELLO (teleop) mode
+    use_gello = PythonExpression([
+        "'", LaunchConfiguration('use_gello'), "' == 'true'",
+    ])
+
     left_joint_state_to_traj_node = Node(
         package='ur_robotiq',
         executable='joint_state_to_trajectory_node',
@@ -341,11 +346,6 @@ def generate_launch_description():
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
         }],
     )
-
-    # True when using GELLO (teleop) mode
-    use_gello = PythonExpression([
-        "'", LaunchConfiguration('use_gello'), "' == 'true'",
-    ])
 
     # Gello launch (includes GELLO publishers and offset nodes)
     gello_launch = IncludeLaunchDescription(

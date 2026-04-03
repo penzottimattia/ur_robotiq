@@ -16,7 +16,7 @@ setup(
         ('share/' + package_name + '/urdf', glob('urdf/*')),
         ('share/' + package_name + '/meshes', glob('meshes/*')),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'pynput'],
     zip_safe=True,
     maintainer='root',
     maintainer_email='penzottimattia@gmail.com',

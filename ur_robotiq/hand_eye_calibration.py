@@ -19,8 +19,6 @@ import yaml
 import numpy as np
 import threading
 import sys
-import tty
-import termios
 
 import rclpy
 from rclpy.node import Node
@@ -94,44 +92,37 @@ class HandEyeCalibrator(Node):
         self.sub = self.create_subscription(PoseStamped, self.pose_topic, self._pose_cb, 10)
 
     def _keyboard_monitor(self):
-        """Wait for a single keypress on stdin and trigger computation early.
+        """Wait for a single keypress and trigger computation early.
 
-        This uses tty/termios to read a single character without requiring Enter.
-        If stdin is not a TTY (e.g. launched as a service), the monitor returns.
+        Uses pynput to monitor keyboard input globally without manipulating terminal settings.
         """
         try:
-            if not sys.stdin.isatty():
-                return
-        except Exception:
+            from pynput import keyboard
+        except ImportError:
+            self.get_logger().warn('pynput not installed, keyboard monitoring disabled')
             return
 
         self.get_logger().info('Press any key to interrupt sampling and compute transform')
         self.get_logger().info('Starting sampling in 3 seconds...')
         time.sleep(3)
-        fd = sys.stdin.fileno()
-        old_settings = termios.tcgetattr(fd)
-        try:
-            tty.setcbreak(fd)
-            # block until a single key is pressed
-            _ = sys.stdin.read(1)
+
+        def on_key_press(key):
             self.get_logger().info('Key pressed, interrupting sampling')
-            # trigger compute; compute_and_publish is thread-safe (uses its own lock)
             self.compute_and_publish()
+            # request shutdown so main spin exits and program terminates
+            try:
+                self.get_logger().info('Shutting down after keypress')
+                rclpy.shutdown()
+            except Exception as e:
+                self.get_logger().warn(f'Failed to shut down rclpy: {e}')
+            return False  # Stop listener
+
+        try:
+            with keyboard.Listener(on_press=on_key_press) as listener:
+                listener.join()
         except Exception as e:
             self.get_logger().warn(f'Keyboard monitor failed: {e}')
-        finally:
-            try:
-                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-            except Exception:
-                pass
 
-        # request shutdown so main spin exits and program terminates
-        try:
-            self.get_logger().info('Shutting down after keypress')
-            rclpy.shutdown()
-        except Exception as e:
-            # rclpy.shutdown may fail if rclpy not initialized or already shut down
-            self.get_logger().warn(f'Failed to shut down rclpy from keyboard monitor: {e}')
 
     def _pose_cb(self, msg: PoseStamped):
         if len(self.matrices) >= self.samples:
