@@ -20,12 +20,12 @@ def generate_launch_description():
     )
     left_gello_port_arg = DeclareLaunchArgument(
         'left_gello_port',
-        default_value='/dev/ttyUSB1',
+        default_value='/dev/ttyUSB0',
         description='Serial port for left GELLO (override default)',
     )
     right_gello_port_arg = DeclareLaunchArgument(
         'right_gello_port',
-        default_value='/dev/ttyUSB2',
+        default_value='/dev/ttyUSB1',
         description='Serial port for right GELLO (override default)',
     )
     left_gripper_min_arg = DeclareLaunchArgument(

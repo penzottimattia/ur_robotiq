@@ -64,12 +64,12 @@ def generate_launch_description():
     )
     left_gello_port_arg = DeclareLaunchArgument(
         'left_gello_port',
-        default_value='/dev/ttyUSB1',
+        default_value='/dev/ttyUSB0',
         description='Serial port for left GELLO (used only when use_gello=true)',
     )
     right_gello_port_arg = DeclareLaunchArgument(
         'right_gello_port',
-        default_value='/dev/ttyUSB2',
+        default_value='/dev/ttyUSB1',
         description='Serial port for right GELLO (used only when use_gello=true)',
     )
     base_poses_file_arg = DeclareLaunchArgument(
