@@ -92,6 +92,7 @@ def _launch_from_config(context, *args, **kwargs):
             continue
 
         params = [{
+            'input_topic': c.get('input_topic', ''),
             'device': int(c.get('device', 0)),
             'topic': c.get('topic', '/camera/image_raw'),
             'fps': float(c.get('fps', 10.0)),

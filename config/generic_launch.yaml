@@ -12,41 +12,68 @@ static_camera_tf:
 objects:
   - name: vial
     mesh: /ws/src/ur_robotiq/object/vial/vial.obj
-    pose_topic: /object_pose/white_vial
+    # pose_topic: /object_pose/white_vial
+    pose_topic: /object_pose
     frame: camera_color_optical_frame
     scale: 1.0
 
-  - name: rack_yellow
-    mesh: /ws/src/ur_robotiq/object/rack_yellow/rack_yellow.obj
-    pose_topic: /object_pose/rack_yellow
-    frame: camera_color_optical_frame
-    scale: 1.0
+  # - name: rack_yellow
+  #   mesh: /ws/src/ur_robotiq/object/rack_yellow/rack_yellow.obj
+  #   pose_topic: /object_pose/rack_yellow
+  #   frame: camera_color_optical_frame
+  #   scale: 1.0
 
 transforms:
-  - input_topic: /object_pose/white_vial
+  - input_topic: /object_pose
+  # - input_topic: /object_pose/white_vial
     output_topic: /object_detection/vial
     target_frame: world
 
-  - input_topic: /object_pose/rack_yellow
-    output_topic: /object_detection/rack_yellow
-    target_frame: world
+  # - input_topic: /object_pose/rack_yellow
+  #   output_topic: /object_detection/rack_yellow
+  #   target_frame: world
 
 # Camera nodes to launch (USB cameras). Each entry will start a
 # `usb_camera_node` from this package with the provided parameters.
 cameras:
-  - name: usb0
-    device: 13
-    topic: /camera/image_raw
+
+  - name: realsense
+    input_topic: /camera/color/image_raw
+    device: 6
+    topic: /realsense_camera/color/image_raw
     fps: 10.0
     output_size: 224
     encoding: rgb8
     enabled: true
 
-  # Example additional camera
-  # - name: usb1
-  #   device: 1
-  #   topic: /camera_left/image_raw
-  #   fps: 10.0
-  #   output_size: 128
-  #   encoding: rgb8
-  #   enabled: false
+  - name: right_robot_top_camera
+    device: 8
+    topic: /right_top_camera/color/image_raw
+    fps: 10.0
+    output_size: 224
+    encoding: rgb8
+    enabled: true
+
+  - name: right_robot_bottom_camera
+    device: 10
+    topic: /right_bottom_camera/color/image_raw
+    fps: 10.0
+    output_size: 224
+    encoding: rgb8
+    enabled: true
+
+  - name: left_robot_top_camera
+    device: 12
+    topic: /left_top_camera/color/image_raw
+    fps: 10.0
+    output_size: 224
+    encoding: rgb8
+    enabled: true
+
+  - name: left_robot_bottom_camera
+    device: 14
+    topic: /left_bottom_camera/color/image_raw
+    fps: 10.0
+    output_size: 224
+    encoding: rgb8
+    enabled: true

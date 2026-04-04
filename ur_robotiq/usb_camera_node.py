@@ -13,6 +13,7 @@ class USBCameraNode(Node):
         super().__init__('usb_camera_node')
 
         # parameters
+        self.declare_parameter('input_topic', '')
         self.declare_parameter('device', 0)
         self.declare_parameter('topic', '/camera/image_raw')
         self.declare_parameter('fps', 10.0)
@@ -22,6 +23,7 @@ class USBCameraNode(Node):
         # image encoding to publish: 'bgr8' or 'rgb8'
         self.declare_parameter('encoding', 'rgb8')
 
+        input_topic = self.get_parameter('input_topic').get_parameter_value().string_value
         device = self.get_parameter('device').get_parameter_value().integer_value
         topic = self.get_parameter('topic').get_parameter_value().string_value
         fps = float(self.get_parameter('fps').get_parameter_value().double_value)
@@ -31,31 +33,37 @@ class USBCameraNode(Node):
         self.pub = self.create_publisher(Image, topic, 10)
         self.bridge = CvBridge()
 
-        # video capture
-        self.cap = cv2.VideoCapture(device)
-
-        # ensure the device opened correctly; if not, fail fast
-        if not self.cap.isOpened():
-            self.get_logger().error(f'Failed to open video device {device}')
-            try:
-                self.cap.release()
-            except Exception:
-                pass
-            raise RuntimeError(f'Cannot open video device {device}')
-
         self._frame_lock = threading.Lock()
         self._latest_frame = None
         self._stop_event = threading.Event()
+        self.cap = None
 
-        # reader thread
-        self._reader = threading.Thread(target=self._capture_loop, daemon=True)
-        self._reader.start()
+        # If input_topic is specified, subscribe to it instead of capturing from device
+        if input_topic:
+            self.create_subscription(Image, input_topic, self._image_callback, 10)
+            self.get_logger().info(f'USB camera node started (input_topic={input_topic}, topic={topic}, fps={fps})')
+        else:
+            # video capture
+            self.cap = cv2.VideoCapture(device)
+
+            # ensure the device opened correctly; if not, fail fast
+            if not self.cap.isOpened():
+                self.get_logger().error(f'Failed to open video device {device}')
+                try:
+                    self.cap.release()
+                except Exception:
+                    pass
+                raise RuntimeError(f'Cannot open video device {device}')
+
+            # reader thread
+            self._reader = threading.Thread(target=self._capture_loop, daemon=True)
+            self._reader.start()
+
+            self.get_logger().info(f'USB camera node started (device={device}, topic={topic}, fps={fps})')
 
         # publisher timer
         period = 1.0 / max(1e-3, fps)
         self.create_timer(period, self._publish_latest_frame)
-
-        self.get_logger().info(f'USB camera node started (device={device}, topic={topic}, fps={fps})')
 
     def _capture_loop(self):
         while rclpy.ok() and not self._stop_event.is_set():
@@ -96,6 +104,15 @@ class USBCameraNode(Node):
 
         msg.header.stamp = self.get_clock().now().to_msg()
         self.pub.publish(msg)
+
+    def _image_callback(self, msg):
+        """Callback for receiving images from input topic."""
+        try:
+            frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+            with self._frame_lock:
+                self._latest_frame = frame
+        except Exception as e:
+            self.get_logger().error(f'Failed to convert image from input topic: {e}')
 
     def destroy_node(self):
         # stop reader
