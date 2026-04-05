@@ -18,16 +18,6 @@ def generate_launch_description():
         default_value='2',
         description='GELLO device ID for right arm (1 or 2)',
     )
-    left_gello_port_arg = DeclareLaunchArgument(
-        'left_gello_port',
-        default_value='/dev/ttyUSB0',
-        description='Serial port for left GELLO (override default)',
-    )
-    right_gello_port_arg = DeclareLaunchArgument(
-        'right_gello_port',
-        default_value='/dev/ttyUSB1',
-        description='Serial port for right GELLO (override default)',
-    )
     left_gripper_min_arg = DeclareLaunchArgument(
         'left_gripper_min',
         default_value='0.0',
@@ -57,7 +47,6 @@ def generate_launch_description():
         parameters=[
             {
                 'gello_device': LaunchConfiguration('left_gello_id'),
-                'port': LaunchConfiguration('left_gello_port'),
             }
         ],
         output='screen',
@@ -71,7 +60,6 @@ def generate_launch_description():
         parameters=[
             {
                 'gello_device': LaunchConfiguration('right_gello_id'),
-                'port': LaunchConfiguration('right_gello_port'),
             }
         ],
         output='screen',
@@ -88,9 +76,11 @@ def generate_launch_description():
                 'gripper_max': LaunchConfiguration('left_gripper_max'),
                 'gripper_joint_name': 'left_robotiq_85_left_knuckle_joint',
                 'robot_joint_state_topic': '/left_state_broadcaster/joint_states',
-                'trajectory_topic': '/left_arm_controller/joint_trajectory',
-                'gripper_topic': '/left_gripper_controller/joint_trajectory',
+                'command_topic': '/left_arm_controller/commands',
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('left_gello_id'), '/joint_states'],
+                'reset_service_name': 'gello_1/reset_offsets',
+                'pause_service_name': 'gello_1/pause_publisher',
+                'close_gripper_service_name': 'gello_1/close_gripper',
             }
         ],
         output='screen',
@@ -107,9 +97,11 @@ def generate_launch_description():
                 'gripper_max': LaunchConfiguration('right_gripper_max'),
                 'gripper_joint_name': 'right_robotiq_85_left_knuckle_joint',
                 'robot_joint_state_topic': '/right_state_broadcaster/joint_states',
-                'trajectory_topic': '/right_arm_controller/joint_trajectory',
-                'gripper_topic': '/right_gripper_controller/joint_trajectory',
+                'command_topic': '/right_arm_controller/commands',
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('right_gello_id'), '/joint_states'],
+                'reset_service_name': 'gello_2/reset_offsets',
+                'pause_service_name': 'gello_2/pause_publisher',
+                'close_gripper_service_name': 'gello_2/close_gripper',
             }
         ],
         output='screen',
@@ -118,8 +110,6 @@ def generate_launch_description():
     return LaunchDescription([
         left_gello_id_arg,
         right_gello_id_arg,
-        left_gello_port_arg,
-        right_gello_port_arg,
         left_gripper_min_arg,
         left_gripper_max_arg,
         right_gripper_min_arg,

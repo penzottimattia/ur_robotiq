@@ -75,6 +75,42 @@ Important parameters:
 - `skip_if_program_running` (default: `true`)
 - `wait_for_service_timeout`, `service_call_timeout`
 
+### Reset GELLO offsets
+
+The GELLO offset node exposes a `Trigger` service that re-anchors the robot and GELLO offset reference from the latest observed joint states.
+
+Example:
+
+```bash
+ros2 service call /left_gello_offset_node/reset_offsets std_srvs/srv/Trigger {}
+```
+
+The service name is configurable via the `reset_service_name` parameter.
+
+### Pause GELLO publishing
+
+The GELLO offset node also exposes a `Trigger` service that pauses joint command publishing. Publishing stays paused until `reset_offsets` is called again.
+
+Example:
+
+```bash
+ros2 service call /left_gello_offset_node/pause_publisher std_srvs/srv/Trigger {}
+```
+
+The pause service name is configurable via the `pause_service_name` parameter.
+
+### Close the gripper
+
+The GELLO offset node exposes a `Trigger` service that republishes the latest arm joint state with the gripper driven to a configured closed position. The command duration is encoded in the published joint-state header so the downstream trajectory node can forward it as a timed trajectory.
+
+Example:
+
+```bash
+ros2 service call /left_gello_offset_node/close_gripper std_srvs/srv/Trigger {}
+```
+
+The close service name, closed gripper position, and duration are configurable via the `close_gripper_service_name`, `closed_gripper_position`, and `close_gripper_duration` parameters.
+
 ### 3) Extract calibration for both robots
 
 ```bash

@@ -2,6 +2,7 @@
 import time
 import rclpy
 from rclpy.node import Node
+from rclpy.qos import QoSProfile, HistoryPolicy, ReliabilityPolicy
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
@@ -13,6 +14,7 @@ class JointStateToTrajectoryNode(Node):
         self.declare_parameter('trajectory_topic', '/joint_trajectory')
         self.declare_parameter('gripper_topic', '/gripper_trajectory')
         self.declare_parameter('gripper_joint', 'gripper_joint')
+
         self.tf_prefix = self.get_parameter('tf_prefix').get_parameter_value().string_value
         self.joint_state_topic = self.get_parameter('joint_state_topic').get_parameter_value().string_value
         self.trajectory_topic = self.get_parameter('trajectory_topic').get_parameter_value().string_value
@@ -21,17 +23,29 @@ class JointStateToTrajectoryNode(Node):
 
         self.publisher = self.create_publisher(JointTrajectory, self.trajectory_topic, 10)
         self.gripper_publisher = self.create_publisher(JointTrajectory, self.gripper_topic, 10)
+
+        self._subscription_qos = QoSProfile(
+            depth=1,
+            history=HistoryPolicy.KEEP_LAST,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+        )
+
         self.subscription = self.create_subscription(
             JointState,
             self.joint_state_topic,
             self.joint_state_callback,
-            10
+            qos_profile=self._subscription_qos,
         )
 
     def joint_state_callback(self, msg):
 
         if msg.header.stamp.sec < 0:
             return
+        
+        # check if tf_prefix is aleady applied to joint names, and if so, apply it permanently to the gripper joint name
+        if msg.name[0].startswith(self.tf_prefix):
+            self.gripper_joint = self.tf_prefix + self.gripper_joint
+            self.tf_prefix = ''
         
         gripper_msg = JointTrajectory()
         gripper_msg.joint_names = [self.tf_prefix + self.gripper_joint]

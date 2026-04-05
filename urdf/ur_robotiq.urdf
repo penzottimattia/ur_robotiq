@@ -11,6 +11,7 @@
 	<xacro:arg name="use_mock_grippers" default="true"/>
 	<xacro:arg name="gripper_fake_sensor_commands" default="false"/>
 	<xacro:arg name="use_calib_probe" default="false"/>
+	<xacro:arg name="gripper_force_multiplier" default="0.01"/>
 
 	<xacro:arg name="left_calib_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
 	<xacro:arg name="right_calib_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
@@ -72,6 +73,7 @@
 		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
 		gripper_com_port="$(arg left_gripper_com_port)"
 		gripper_closed_position="${xacro.load_yaml('$(arg left_gripper_calib_file)').closed_position}"
+		gripper_force_multiplier="$(arg gripper_force_multiplier)"
 		use_calib_probe="$(arg use_calib_probe)"/>
 
 	<xacro:ur3_robotiq_unit
@@ -102,6 +104,7 @@
 		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
 		gripper_com_port="$(arg right_gripper_com_port)"
 		gripper_closed_position="${xacro.load_yaml('$(arg right_gripper_calib_file)').closed_position}"
+		gripper_force_multiplier="$(arg gripper_force_multiplier)"
 		use_calib_probe="$(arg use_calib_probe)"/>
 
 </robot>

@@ -119,6 +119,13 @@ def generate_launch_description():
         'ur_robotiq.urdf',
     ])
 
+    # Gripper configuration
+    gripper_force_multiplier_arg = DeclareLaunchArgument(
+        'gripper_force_multiplier',
+        default_value='0.01',
+        description='Multiplier for gripper force commands (use lower values for more delicate grasping)',
+    )
+
     use_mock_hardware = PythonExpression([
         "'", LaunchConfiguration('mode'), "' == 'full_mock'",
     ])
@@ -147,6 +154,7 @@ def generate_launch_description():
         ' right_gripper_com_port:=', LaunchConfiguration('right_tool_device_name'),
         ' left_tool_tcp_port:=', LaunchConfiguration('left_tool_tcp_port'),
         ' right_tool_tcp_port:=', LaunchConfiguration('right_tool_tcp_port'),
+        ' gripper_force_multiplier:=', LaunchConfiguration('gripper_force_multiplier'),
         # Pass calibration file paths through to the xacro so they are available in the generated robot_description
         ' left_calib_file:=', LaunchConfiguration('left_calib_file'),
         ' right_calib_file:=', LaunchConfiguration('right_calib_file'),
@@ -312,17 +320,11 @@ def generate_launch_description():
         output='screen',
     )
 
-    # True when using GELLO (teleop) mode
-    use_gello = PythonExpression([
-        "'", LaunchConfiguration('use_gello'), "' == 'true'",
-    ])
-
     left_joint_state_to_traj_node = Node(
         package='ur_robotiq',
         executable='joint_state_to_trajectory_node',
         name='left_joint_state_to_trajectory_node',
         output='screen',
-        condition=UnlessCondition(use_gello),
         parameters=[{
             'tf_prefix': 'left_',
             'joint_state_topic': '/left_arm_controller/commands',
@@ -337,7 +339,6 @@ def generate_launch_description():
         executable='joint_state_to_trajectory_node',
         name='right_joint_state_to_trajectory_node',
         output='screen',
-        condition=UnlessCondition(use_gello),
         parameters=[{
             'tf_prefix': 'right_',
             'joint_state_topic': '/right_arm_controller/commands',
@@ -346,6 +347,11 @@ def generate_launch_description():
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
         }],
     )
+
+    # True when using GELLO (teleop) mode
+    use_gello = PythonExpression([
+        "'", LaunchConfiguration('use_gello'), "' == 'true'",
+    ])
 
     # Gello launch (includes GELLO publishers and offset nodes)
     gello_launch = IncludeLaunchDescription(
@@ -429,7 +435,7 @@ def generate_launch_description():
         right_gello_port_arg,
         base_poses_file_arg,
         controllers_file_arg,
-        # include new calibration launch args
+        gripper_force_multiplier_arg,
         left_calib_file_arg,
         right_calib_file_arg,
         robot_state_publisher,
