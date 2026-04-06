@@ -21,6 +21,8 @@ The node:
 5. Publishes gripper position remapped from [0, 1] to [gripper_min, gripper_max]
 """
 
+import time
+
 import numpy as np
 import rclpy
 from rclpy.node import Node
@@ -210,12 +212,6 @@ class GelloOffsetNode(Node):
         self.initialized = True
         self.paused = False
 
-        self.get_logger().info(
-            'Offset reference reset from latest joint states.\n'
-            f'  Robot positions: {self.robot_initial_positions}\n'
-            f'  Gello positions: {self.gello_initial_positions}'
-        )
-
         response.success = True
         response.message = 'Offsets recomputed from latest joint states.'
         return response
@@ -225,8 +221,6 @@ class GelloOffsetNode(Node):
         del request
 
         self.paused = True
-
-        self.get_logger().info('Joint command publishing paused. Call reset_offsets to resume.')
 
         response.success = True
         response.message = 'Joint command publishing paused.'
@@ -258,6 +252,8 @@ class GelloOffsetNode(Node):
             command_positions,
             10
         )
+
+        time.sleep(10)  # Allow time for the command to be processed
 
         response.success = True
         response.message = 'Published close-gripper command using latest robot state.'
