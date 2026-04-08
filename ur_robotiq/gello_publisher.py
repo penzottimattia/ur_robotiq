@@ -75,8 +75,8 @@ GELLO_CONFIGS = {
             3 * np.pi / 2,
         ],
         "arm_joint_signs": [1, 1, -1, 1, 1, 1],
-        "gripper_open_deg": 198.0,
-        "gripper_close_deg": 157.0,
+        "gripper_open_deg": 190.0,
+        "gripper_close_deg": 145.0,
     },
     "2": {
         "name": "gello_2",
@@ -93,8 +93,8 @@ GELLO_CONFIGS = {
             2 * np.pi / 2,
         ],
         "arm_joint_signs": [1, 1, -1, 1, 1, 1],
-        "gripper_open_deg": 198.0,
-        "gripper_close_deg": 156.0,
+        "gripper_open_deg": 190.0,
+        "gripper_close_deg": 145.0,
     },
 }
 

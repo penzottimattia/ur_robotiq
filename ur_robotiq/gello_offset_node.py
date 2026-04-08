@@ -1,33 +1,29 @@
 #!/usr/bin/env python3
-"""Gello offset computation and joint trajectory command node
+"""Gello offset computation and joint trajectory command node.
 
 Subscribes to:
-- Robot joint states (once, to get initial position)
-- Gello joint states (continuously)
+- Robot joint states
+- Gello joint states
 
-Computes the offset between gello and robot initial positions, then
-publishes adjusted joint states. A downstream joint-state-to-trajectory
-node converts those commands into controller trajectories.
+Control modes are switched via ROS2 parameter updates (`SetParameters`):
+- 0: idle (no command output)
+- 1: normal offset mode
+- 2: positive speed mode on one specific joint
+- 3: negative speed mode on one specific joint
 
-Joint mapping is automatically deduced by order:
-- First N-1 gello joints map to all robot joints (by index order)
-- Last gello joint is treated as the gripper and remapped to gripper_min/gripper_max
+In normal mode, the node publishes:
+target = robot_initial + (gello - gello_initial)
+with the gello last joint remapped to the robot gripper range.
 
-The node:
-1. Waits for the first robot joint state message as the reference
-2. Waits for the first gello joint state message as the reference
-3. Computes the offset: offset = gello_initial - robot_initial
-4. On each subsequent gello message, publishes: target = robot_initial + (gello - initial_gello_state)
-5. Publishes gripper position remapped from [0, 1] to [gripper_min, gripper_max]
+In speed modes, a configured gello trigger joint in [0, 1] scales angular
+speed (rad/s) for one configured robot joint.
 """
-
-import time
 
 import numpy as np
 import rclpy
+from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
-from std_srvs.srv import Trigger
 
 
 class GelloOffsetNode(Node):
@@ -38,12 +34,13 @@ class GelloOffsetNode(Node):
         self.declare_parameter('robot_joint_state_topic', '/joint_states')
         self.declare_parameter('gello_joint_state_topic', '/gello/joint_states')
         self.declare_parameter('command_topic', '/joint_commands')
-        self.declare_parameter('reset_service_name', 'reset_offsets')
-        self.declare_parameter('pause_service_name', 'pause_publisher')
-        self.declare_parameter('close_gripper_service_name', 'close_gripper')
         self.declare_parameter('gripper_joint_name', '')
         self.declare_parameter('gripper_min', 0.0)
         self.declare_parameter('gripper_max', 0.8)
+        self.declare_parameter('control_mode', 1)
+        self.declare_parameter('speed_mode_joint_name', '')
+        self.declare_parameter('speed_trigger_joint_index', -1)
+        self.declare_parameter('speed_max_velocity', 1.0)
         self.declare_parameter('tf_prefix', '')
         
         # Get parameter values
@@ -51,11 +48,12 @@ class GelloOffsetNode(Node):
         self.gello_joint_state_topic = self.get_parameter('gello_joint_state_topic').get_parameter_value().string_value
         self.command_topic = self.get_parameter('command_topic').get_parameter_value().string_value
         self.gripper_joint_name = self.get_parameter('gripper_joint_name').get_parameter_value().string_value
-        self.reset_service_name = self.get_parameter('reset_service_name').get_parameter_value().string_value
-        self.pause_service_name = self.get_parameter('pause_service_name').get_parameter_value().string_value
-        self.close_gripper_service_name = self.get_parameter('close_gripper_service_name').get_parameter_value().string_value
         self.gripper_min = self.get_parameter('gripper_min').get_parameter_value().double_value
         self.gripper_max = self.get_parameter('gripper_max').get_parameter_value().double_value
+        self.control_mode = self.get_parameter('control_mode').get_parameter_value().integer_value
+        self.speed_mode_joint_name = self.get_parameter('speed_mode_joint_name').get_parameter_value().string_value
+        self.speed_trigger_joint_index = self.get_parameter('speed_trigger_joint_index').get_parameter_value().integer_value
+        self.speed_max_velocity = self.get_parameter('speed_max_velocity').get_parameter_value().double_value
         
         # State variables
         self.latest_robot_positions = None
@@ -66,36 +64,20 @@ class GelloOffsetNode(Node):
         self.latest_gello_joint_names = None
         self.gello_initial_positions = None
         self.gello_joint_names = None
-        self.gello_offset = None
         self.initialized = False
-        self.paused = False
+        self.speed_mode_last_update_time = None
+        self.speed_mode_target_positions = None
+        self.speed_mode_start_time = None
+
+        self.parameter_callback = self.add_on_set_parameters_callback(
+            self._on_set_parameters
+        )
         
         # Publisher for combined joint-state commands
         self.command_publisher = self.create_publisher(
             JointState,
             self.command_topic,
             10,
-        )
-
-        # Service to recompute the offset reference from the latest observed states
-        self.reset_service = self.create_service(
-            Trigger,
-            self.reset_service_name,
-            self.reset_offsets_callback,
-        )
-
-        # Service to stop publishing until the offsets are explicitly reset.
-        self.pause_service = self.create_service(
-            Trigger,
-            self.pause_service_name,
-            self.pause_publisher_callback,
-        )
-
-        # Service to send the latest arm state with the gripper driven to a closed position.
-        self.close_gripper_service = self.create_service(
-            Trigger,
-            self.close_gripper_service_name,
-            self.close_gripper_callback,
         )
         
         # Subscribers
@@ -113,12 +95,16 @@ class GelloOffsetNode(Node):
             10
         )
         
-        self.get_logger().info(
+        self.get_logger().debug(
             f'GelloOffsetNode initialized:\n'
             f'  Robot joint states: {self.robot_joint_state_topic}\n'
             f'  Gello joint states: {self.gello_joint_state_topic}\n'
             f'  Command output: {self.command_topic}\n'
-            f'  Gripper min/max: {self.gripper_min}/{self.gripper_max}'
+            f'  Gripper min/max: {self.gripper_min}/{self.gripper_max}\n'
+            f'  Control mode: {self.control_mode} (0=idle, 1=normal, 2=pos-speed, 3=neg-speed)\n'
+            f'  Speed joint: {self.speed_mode_joint_name or "<last arm joint>"}\n'
+            f'  Speed trigger joint index: {self.speed_trigger_joint_index}\n'
+            f'  Speed max velocity: {self.speed_max_velocity} rad/s'
         )
     
     def robot_joint_state_callback(self, msg):
@@ -149,6 +135,13 @@ class GelloOffsetNode(Node):
         self.latest_gello_joint_names = msg.name
         self.latest_gello_positions = np.array(msg.position)
 
+        if self.control_mode == 0:
+            return
+
+        if self.control_mode in (2, 3):
+            self._publish_speed_mode_command(msg)
+            return
+
         if not self.initialized:
             if self.gello_initial_positions is None:
                 self.gello_joint_names = msg.name
@@ -162,9 +155,6 @@ class GelloOffsetNode(Node):
                 
                 # Check if initialization is complete
                 self._check_initialization()
-            return
-        
-        if self.paused:
             return
 
         # Extract arm and gripper joints (assume last joint is gripper)
@@ -188,76 +178,151 @@ class GelloOffsetNode(Node):
             0,
         )
 
-    def reset_offsets_callback(self, request, response):
-        """Reset the offset reference using the most recently observed joint states."""
-        del request
+    def _on_set_parameters(self, parameters):
+        """Handle runtime updates for control mode and speed-mode parameters."""
+        new_control_mode = self.control_mode
+        new_speed_mode_joint_name = self.speed_mode_joint_name
+        new_speed_trigger_joint_index = self.speed_trigger_joint_index
+        new_speed_max_velocity = self.speed_max_velocity
 
-        if self.latest_robot_positions is None:
-            response.success = False
-            response.message = 'No robot joint state received yet; cannot reset offsets.'
-            return response
+        for param in parameters:
+            if param.name == 'control_mode':
+                if param.value not in (0, 1, 2, 3):
+                    return SetParametersResult(
+                        successful=False,
+                        reason='control_mode must be one of {0, 1, 2, 3}',
+                    )
+                new_control_mode = int(param.value)
+            elif param.name == 'speed_mode_joint_name':
+                new_speed_mode_joint_name = str(param.value)
+            elif param.name == 'speed_trigger_joint_index':
+                new_speed_trigger_joint_index = int(param.value)
+            elif param.name == 'speed_max_velocity':
+                if float(param.value) < 0.0:
+                    return SetParametersResult(
+                        successful=False,
+                        reason='speed_max_velocity must be >= 0.0',
+                    )
+                new_speed_max_velocity = float(param.value)
 
-        if self.latest_gello_positions is None:
-            response.success = False
-            response.message = 'No gello joint state received yet; cannot reset offsets.'
-            return response
+        previous_mode = self.control_mode
+        transitioning_to_normal = previous_mode != 1 and new_control_mode == 1
+        transitioning_to_positive_speed = previous_mode == 1 and new_control_mode == 2
 
-        self.robot_joint_names = self.latest_robot_joint_names
-        self.robot_initial_positions = np.array(self.latest_robot_positions)
+        if transitioning_to_normal:
+            if not self._recompute_offsets_from_latest():
+                return SetParametersResult(
+                    successful=False,
+                    reason=(
+                        'Cannot transition to normal mode without both latest robot and '
+                        'gello joint states to recompute offsets.'
+                    ),
+                )
+
+        self.control_mode = new_control_mode
+        self.speed_mode_joint_name = new_speed_mode_joint_name
+        self.speed_trigger_joint_index = new_speed_trigger_joint_index
+        self.speed_max_velocity = new_speed_max_velocity
+
+        if self.control_mode in (2, 3):
+            self.speed_mode_last_update_time = None
+            self.speed_mode_target_positions = None
+
+        if transitioning_to_positive_speed:
+            self.speed_mode_start_time = self.get_clock().now().nanoseconds
+        else:
+            self.speed_mode_start_time = None
+
+        self.get_logger().debug(
+            f'Updated control configuration: mode={self.control_mode}, '
+            f'speed_joint={self.speed_mode_joint_name or "<last arm joint>"}, '
+            f'trigger_index={self.speed_trigger_joint_index}, '
+            f'max_velocity={self.speed_max_velocity}'
+        )
+
+        return SetParametersResult(successful=True, reason='')
+
+    def _recompute_offsets_from_latest(self):
+        """Reset normal-mode references from the latest observed robot and gello states."""
+        if self.latest_robot_positions is None or self.latest_robot_joint_names is None:
+            return False
+
+        if self.latest_gello_positions is None or self.latest_gello_joint_names is None:
+            return False
+
+        self.robot_joint_names = list(self.latest_robot_joint_names)
+        self.robot_initial_positions = np.array(self.latest_robot_positions, copy=True)
         if not self.gripper_joint_name:
             self.gripper_joint_name = self.robot_joint_names[-1]
 
-        self.gello_joint_names = self.latest_gello_joint_names
-        self.gello_initial_positions = np.array(self.latest_gello_positions)
+        self.gello_joint_names = list(self.latest_gello_joint_names)
+        self.gello_initial_positions = np.array(self.latest_gello_positions, copy=True)
         self.initialized = True
-        self.paused = False
+        self.get_logger().debug('Offsets recomputed from latest robot and gello joint states.')
+        return True
 
-        response.success = True
-        response.message = 'Offsets recomputed from latest joint states.'
-        return response
-
-    def pause_publisher_callback(self, request, response):
-        """Pause joint command publishing until the reset service is called."""
-        del request
-
-        self.paused = True
-
-        response.success = True
-        response.message = 'Joint command publishing paused.'
-        return response
-
-    def close_gripper_callback(self, request, response):
-        """Publish the latest arm state with the gripper driven to the closed position."""
-        del request
-
+    def _publish_speed_mode_command(self, gello_msg):
+        """Publish one-joint speed command based on trigger value in [0, 1]."""
         if self.latest_robot_positions is None or self.latest_robot_joint_names is None:
-            response.success = False
-            response.message = 'No robot joint state received yet; cannot close gripper.'
-            return response
+            return
 
         if len(self.latest_robot_positions) < 1:
-            response.success = False
-            response.message = 'Robot joint state is empty; cannot close gripper.'
-            return response
+            return
 
         joint_names = list(self.latest_robot_joint_names)
-        gripper_name = self.gripper_joint_name or joint_names[-1]
+        if len(joint_names) < 1:
+            return
 
-        arm_positions = list(np.array(self.latest_robot_positions[:-1], copy=True))
-        command_positions = arm_positions + [self.gripper_max]  # Set gripper to fully closed
-        command_names = joint_names[:-1] + [gripper_name]
+        # Default to the last arm joint (joint before gripper) when not explicitly configured.
+        if self.speed_mode_joint_name:
+            if self.speed_mode_joint_name not in joint_names:
+                self.get_logger().warn(
+                    f'speed_mode_joint_name={self.speed_mode_joint_name} not found in robot joints.'
+                )
+                return
+            speed_joint_index = joint_names.index(self.speed_mode_joint_name)
+        else:
+            speed_joint_index = max(len(joint_names) - 2, 0)
+
+        trigger_index = int(self.speed_trigger_joint_index)
+        if trigger_index < 0:
+            trigger_index = len(gello_msg.position) - 1
+
+        if trigger_index < 0 or trigger_index >= len(gello_msg.position):
+            self.get_logger().warn(
+                f'speed_trigger_joint_index={trigger_index} is out of range for gello message size '
+                f'{len(gello_msg.position)}.'
+            )
+            return
+
+        if self.control_mode == 2 and self.speed_mode_start_time is not None:
+            now_ns = self.get_clock().now().nanoseconds
+            if (now_ns - self.speed_mode_start_time) < 5_000_000_000:
+                return
+
+        trigger = float(np.clip(gello_msg.position[trigger_index], 0.0, 1.0))
+        direction = 1.0 if self.control_mode == 2 else -1.0
+
+        now_ns = self.get_clock().now().nanoseconds
+        if self.speed_mode_last_update_time is None:
+            dt = 0.0
+        else:
+            dt = max((now_ns - self.speed_mode_last_update_time) * 1e-9, 0.0)
+        self.speed_mode_last_update_time = now_ns
+
+        if self.speed_mode_target_positions is None:
+            self.speed_mode_target_positions = np.array(self.latest_robot_positions, copy=True)
+
+        target_positions = np.array(self.latest_robot_positions, copy=True)
+        delta = direction * trigger * self.speed_max_velocity * dt
+        self.speed_mode_target_positions[speed_joint_index] += delta
+        target_positions[speed_joint_index] = self.speed_mode_target_positions[speed_joint_index]
 
         self._publish_joint_command(
-            command_names,
-            command_positions,
-            10
+            joint_names,
+            target_positions.tolist(),
+            0,
         )
-
-        time.sleep(10)  # Allow time for the command to be processed
-
-        response.success = True
-        response.message = 'Published close-gripper command using latest robot state.'
-        return response
 
     def _publish_joint_command(self, joint_names, positions, duration_seconds):
         """Publish a JointState command with a duration encoded in the header stamp."""

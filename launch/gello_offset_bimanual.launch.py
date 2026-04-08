@@ -78,9 +78,7 @@ def generate_launch_description():
                 'robot_joint_state_topic': '/left_state_broadcaster/joint_states',
                 'command_topic': '/left_arm_controller/commands',
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('left_gello_id'), '/joint_states'],
-                'reset_service_name': 'gello_1/reset_offsets',
-                'pause_service_name': 'gello_1/pause_publisher',
-                'close_gripper_service_name': 'gello_1/close_gripper',
+                'control_mode': 1,
             }
         ],
         output='screen',
@@ -99,9 +97,7 @@ def generate_launch_description():
                 'robot_joint_state_topic': '/right_state_broadcaster/joint_states',
                 'command_topic': '/right_arm_controller/commands',
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('right_gello_id'), '/joint_states'],
-                'reset_service_name': 'gello_2/reset_offsets',
-                'pause_service_name': 'gello_2/pause_publisher',
-                'close_gripper_service_name': 'gello_2/close_gripper',
+                'control_mode': 1,
             }
         ],
         output='screen',
