@@ -75,41 +75,48 @@ Important parameters:
 - `skip_if_program_running` (default: `true`)
 - `wait_for_service_timeout`, `service_call_timeout`
 
-### Reset GELLO offsets
+### GELLO control mode switching (SetParameters)
 
-The GELLO offset node exposes a `Trigger` service that re-anchors the robot and GELLO offset reference from the latest observed joint states.
+The GELLO offset node now uses ROS2 parameter updates (service type `rcl_interfaces/srv/SetParameters`) to switch runtime control mode through parameter `control_mode`.
 
-Example:
+Modes:
 
-```bash
-ros2 service call /left_gello_offset_node/reset_offsets std_srvs/srv/Trigger {}
-```
+- `0`: idle (no command publishing)
+- `1`: normal offset mode
+- `2`: positive speed mode for one selected robot joint
+- `3`: negative speed mode for one selected robot joint
 
-The service name is configurable via the `reset_service_name` parameter.
+When transitioning from any mode into `control_mode=1`, the node always recomputes offsets from the latest robot and GELLO joint states before accepting the transition.
 
-### Pause GELLO publishing
-
-The GELLO offset node also exposes a `Trigger` service that pauses joint command publishing. Publishing stays paused until `reset_offsets` is called again.
-
-Example:
+Examples:
 
 ```bash
-ros2 service call /left_gello_offset_node/pause_publisher std_srvs/srv/Trigger {}
+# Idle mode
+ros2 param set /left_gello_offset_node control_mode 0
+
+# Normal mode (forces offset recomputation first)
+ros2 param set /left_gello_offset_node control_mode 1
+
+# Positive speed mode
+ros2 param set /left_gello_offset_node control_mode 2
+
+# Negative speed mode
+ros2 param set /left_gello_offset_node control_mode 3
 ```
 
-The pause service name is configurable via the `pause_service_name` parameter.
+Speed mode parameters:
 
-### Close the gripper
+- `speed_mode_joint_name`: robot joint to drive in speed mode (empty means the last arm joint)
+- `speed_trigger_joint_index`: index of GELLO joint used as trigger in range `[0, 1]` (default `-1` uses the last GELLO joint)
+- `speed_max_velocity`: maximum angular speed in rad/s scaled by trigger value
 
-The GELLO offset node exposes a `Trigger` service that republishes the latest arm joint state with the gripper driven to a configured closed position. The command duration is encoded in the published joint-state header so the downstream trajectory node can forward it as a timed trajectory.
-
-Example:
+Examples:
 
 ```bash
-ros2 service call /left_gello_offset_node/close_gripper std_srvs/srv/Trigger {}
+ros2 param set /left_gello_offset_node speed_mode_joint_name left_wrist_3_joint
+ros2 param set /left_gello_offset_node speed_trigger_joint_index 6
+ros2 param set /left_gello_offset_node speed_max_velocity 1.2
 ```
-
-The close service name, closed gripper position, and duration are configurable via the `close_gripper_service_name`, `closed_gripper_position`, and `close_gripper_duration` parameters.
 
 ### 3) Extract calibration for both robots
 
