@@ -38,6 +38,11 @@ def generate_launch_description():
         default_value='0.8',
         description='Maximum position value for right gripper',
     )
+    mode_transition_delay_seconds_arg = DeclareLaunchArgument(
+        'mode_transition_delay_seconds',
+        default_value='5.0',
+        description='Delay in seconds applied when entering or leaving speed mode',
+    )
     
     # Left GELLO publisher node
     left_gello_publisher_node = Node(
@@ -74,11 +79,13 @@ def generate_launch_description():
             {
                 'gripper_min': LaunchConfiguration('left_gripper_min'),
                 'gripper_max': LaunchConfiguration('left_gripper_max'),
+                'gripper_offset': 0.1,
                 'gripper_joint_name': 'left_robotiq_85_left_knuckle_joint',
                 'robot_joint_state_topic': '/left_state_broadcaster/joint_states',
                 'command_topic': '/left_arm_controller/commands',
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('left_gello_id'), '/joint_states'],
                 'control_mode': 1,
+                'mode_transition_delay_seconds': LaunchConfiguration('mode_transition_delay_seconds'),
             }
         ],
         output='screen',
@@ -93,11 +100,13 @@ def generate_launch_description():
             {
                 'gripper_min': LaunchConfiguration('right_gripper_min'),
                 'gripper_max': LaunchConfiguration('right_gripper_max'),
+                'gripper_offset': 0.1,
                 'gripper_joint_name': 'right_robotiq_85_left_knuckle_joint',
                 'robot_joint_state_topic': '/right_state_broadcaster/joint_states',
                 'command_topic': '/right_arm_controller/commands',
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('right_gello_id'), '/joint_states'],
                 'control_mode': 1,
+                'mode_transition_delay_seconds': LaunchConfiguration('mode_transition_delay_seconds'),
             }
         ],
         output='screen',
@@ -110,6 +119,7 @@ def generate_launch_description():
         left_gripper_max_arg,
         right_gripper_min_arg,
         right_gripper_max_arg,
+        mode_transition_delay_seconds_arg,
         left_gello_publisher_node,
         right_gello_publisher_node,
         left_gello_offset_node,

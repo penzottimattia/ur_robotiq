@@ -82,9 +82,11 @@ The GELLO offset node now uses ROS2 parameter updates (service type `rcl_interfa
 Modes:
 
 - `0`: idle (no command publishing)
-- `1`: normal offset mode
+- `1`: normal offset mode, including the gripper offset
 - `2`: positive speed mode for one selected robot joint
 - `3`: negative speed mode for one selected robot joint
+
+When transitioning between normal mode and either speed mode, the node waits for a configurable delay before publishing commands again. The same delay applies when entering speed mode and when returning to `control_mode=1`.
 
 When transitioning from any mode into `control_mode=1`, the node always recomputes offsets from the latest robot and GELLO joint states before accepting the transition.
 
@@ -109,6 +111,8 @@ Speed mode parameters:
 - `speed_mode_joint_name`: robot joint to drive in speed mode (empty means the last arm joint)
 - `speed_trigger_joint_index`: index of GELLO joint used as trigger in range `[0, 1]` (default `-1` uses the last GELLO joint)
 - `speed_max_velocity`: maximum angular speed in rad/s scaled by trigger value
+- `mode_transition_delay_seconds`: delay applied when entering or leaving speed mode
+- `gripper_offset`: additional gripper bias applied only in normal mode
 
 Examples:
 
@@ -116,6 +120,7 @@ Examples:
 ros2 param set /left_gello_offset_node speed_mode_joint_name left_wrist_3_joint
 ros2 param set /left_gello_offset_node speed_trigger_joint_index 6
 ros2 param set /left_gello_offset_node speed_max_velocity 1.2
+ros2 param set /left_gello_offset_node mode_transition_delay_seconds 5.0
 ```
 
 ### 3) Extract calibration for both robots

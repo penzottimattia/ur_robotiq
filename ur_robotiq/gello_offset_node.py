@@ -13,7 +13,8 @@ Control modes are switched via ROS2 parameter updates (`SetParameters`):
 
 In normal mode, the node publishes:
 target = robot_initial + (gello - gello_initial)
-with the gello last joint remapped to the robot gripper range.
+with the gello last joint remapped to the robot gripper range and an
+optional gripper offset applied.
 
 In speed modes, a configured gello trigger joint in [0, 1] scales angular
 speed (rad/s) for one configured robot joint.
@@ -37,10 +38,12 @@ class GelloOffsetNode(Node):
         self.declare_parameter('gripper_joint_name', '')
         self.declare_parameter('gripper_min', 0.0)
         self.declare_parameter('gripper_max', 0.8)
+        self.declare_parameter('gripper_offset', 0.1)
         self.declare_parameter('control_mode', 1)
         self.declare_parameter('speed_mode_joint_name', '')
         self.declare_parameter('speed_trigger_joint_index', -1)
         self.declare_parameter('speed_max_velocity', 1.0)
+        self.declare_parameter('mode_transition_delay_seconds', 5.0)
         self.declare_parameter('tf_prefix', '')
         
         # Get parameter values
@@ -50,10 +53,12 @@ class GelloOffsetNode(Node):
         self.gripper_joint_name = self.get_parameter('gripper_joint_name').get_parameter_value().string_value
         self.gripper_min = self.get_parameter('gripper_min').get_parameter_value().double_value
         self.gripper_max = self.get_parameter('gripper_max').get_parameter_value().double_value
+        self.gripper_offset = self.get_parameter('gripper_offset').get_parameter_value().double_value
         self.control_mode = self.get_parameter('control_mode').get_parameter_value().integer_value
         self.speed_mode_joint_name = self.get_parameter('speed_mode_joint_name').get_parameter_value().string_value
         self.speed_trigger_joint_index = self.get_parameter('speed_trigger_joint_index').get_parameter_value().integer_value
         self.speed_max_velocity = self.get_parameter('speed_max_velocity').get_parameter_value().double_value
+        self.mode_transition_delay_seconds = self.get_parameter('mode_transition_delay_seconds').get_parameter_value().double_value
         
         # State variables
         self.latest_robot_positions = None
@@ -67,7 +72,7 @@ class GelloOffsetNode(Node):
         self.initialized = False
         self.speed_mode_last_update_time = None
         self.speed_mode_target_positions = None
-        self.speed_mode_start_time = None
+        self.mode_transition_block_until_time = None
 
         self.parameter_callback = self.add_on_set_parameters_callback(
             self._on_set_parameters
@@ -101,10 +106,12 @@ class GelloOffsetNode(Node):
             f'  Gello joint states: {self.gello_joint_state_topic}\n'
             f'  Command output: {self.command_topic}\n'
             f'  Gripper min/max: {self.gripper_min}/{self.gripper_max}\n'
+            f'  Gripper offset: {self.gripper_offset}\n'
             f'  Control mode: {self.control_mode} (0=idle, 1=normal, 2=pos-speed, 3=neg-speed)\n'
             f'  Speed joint: {self.speed_mode_joint_name or "<last arm joint>"}\n'
             f'  Speed trigger joint index: {self.speed_trigger_joint_index}\n'
-            f'  Speed max velocity: {self.speed_max_velocity} rad/s'
+            f'  Speed max velocity: {self.speed_max_velocity} rad/s\n'
+            f'  Mode transition delay: {self.mode_transition_delay_seconds} s'
         )
     
     def robot_joint_state_callback(self, msg):
@@ -142,6 +149,9 @@ class GelloOffsetNode(Node):
             self._publish_speed_mode_command(msg)
             return
 
+        if self._is_mode_transition_block_active():
+            return
+
         if not self.initialized:
             if self.gello_initial_positions is None:
                 self.gello_joint_names = msg.name
@@ -170,7 +180,11 @@ class GelloOffsetNode(Node):
         target_arm_positions = self.robot_initial_positions[:-1] + gello_arm_change
 
         # Handle gripper: remap from 0-1 to gripper_min/gripper_max
-        gripper_value = self.gripper_min + (gello_gripper_position * (self.gripper_max - self.gripper_min))
+        gripper_value = (
+            self.gripper_min
+            + (gello_gripper_position * (self.gripper_max - self.gripper_min))
+            + self.gripper_offset
+        )
 
         self._publish_joint_command(
             list(self.robot_joint_names[:-1]) + [self.gripper_joint_name],
@@ -184,6 +198,7 @@ class GelloOffsetNode(Node):
         new_speed_mode_joint_name = self.speed_mode_joint_name
         new_speed_trigger_joint_index = self.speed_trigger_joint_index
         new_speed_max_velocity = self.speed_max_velocity
+        new_mode_transition_delay_seconds = self.mode_transition_delay_seconds
 
         for param in parameters:
             if param.name == 'control_mode':
@@ -204,10 +219,20 @@ class GelloOffsetNode(Node):
                         reason='speed_max_velocity must be >= 0.0',
                     )
                 new_speed_max_velocity = float(param.value)
+            elif param.name == 'mode_transition_delay_seconds':
+                if float(param.value) < 0.0:
+                    return SetParametersResult(
+                        successful=False,
+                        reason='mode_transition_delay_seconds must be >= 0.0',
+                    )
+                new_mode_transition_delay_seconds = float(param.value)
 
         previous_mode = self.control_mode
         transitioning_to_normal = previous_mode != 1 and new_control_mode == 1
-        transitioning_to_positive_speed = previous_mode == 1 and new_control_mode == 2
+        transitioning_between_normal_and_speed = (
+            (previous_mode == 1 and new_control_mode in (2, 3))
+            or (previous_mode in (2, 3) and new_control_mode == 1)
+        )
 
         if transitioning_to_normal:
             if not self._recompute_offsets_from_latest():
@@ -223,21 +248,26 @@ class GelloOffsetNode(Node):
         self.speed_mode_joint_name = new_speed_mode_joint_name
         self.speed_trigger_joint_index = new_speed_trigger_joint_index
         self.speed_max_velocity = new_speed_max_velocity
+        self.mode_transition_delay_seconds = new_mode_transition_delay_seconds
 
         if self.control_mode in (2, 3):
             self.speed_mode_last_update_time = None
             self.speed_mode_target_positions = None
 
-        if transitioning_to_positive_speed:
-            self.speed_mode_start_time = self.get_clock().now().nanoseconds
+        if transitioning_between_normal_and_speed:
+            self.mode_transition_block_until_time = (
+                self.get_clock().now().nanoseconds
+                + int(self.mode_transition_delay_seconds * 1e9)
+            )
         else:
-            self.speed_mode_start_time = None
+            self.mode_transition_block_until_time = None
 
         self.get_logger().debug(
             f'Updated control configuration: mode={self.control_mode}, '
             f'speed_joint={self.speed_mode_joint_name or "<last arm joint>"}, '
             f'trigger_index={self.speed_trigger_joint_index}, '
-            f'max_velocity={self.speed_max_velocity}'
+            f'max_velocity={self.speed_max_velocity}, '
+            f'transition_delay={self.mode_transition_delay_seconds}'
         )
 
         return SetParametersResult(successful=True, reason='')
@@ -260,6 +290,18 @@ class GelloOffsetNode(Node):
         self.initialized = True
         self.get_logger().debug('Offsets recomputed from latest robot and gello joint states.')
         return True
+
+    def _is_mode_transition_block_active(self):
+        """Return True while the configured mode-transition delay is still in effect."""
+        if self.mode_transition_block_until_time is None:
+            return False
+
+        now_ns = self.get_clock().now().nanoseconds
+        if now_ns < self.mode_transition_block_until_time:
+            return True
+
+        self.mode_transition_block_until_time = None
+        return False
 
     def _publish_speed_mode_command(self, gello_msg):
         """Publish one-joint speed command based on trigger value in [0, 1]."""
@@ -295,10 +337,8 @@ class GelloOffsetNode(Node):
             )
             return
 
-        if self.control_mode == 2 and self.speed_mode_start_time is not None:
-            now_ns = self.get_clock().now().nanoseconds
-            if (now_ns - self.speed_mode_start_time) < 5_000_000_000:
-                return
+        if self._is_mode_transition_block_active():
+            return
 
         trigger = float(np.clip(gello_msg.position[trigger_index], 0.0, 1.0))
         direction = 1.0 if self.control_mode == 2 else -1.0
