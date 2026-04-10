@@ -20,11 +20,16 @@ In speed modes, a configured gello trigger joint in [0, 1] scales angular
 speed (rad/s) for one configured robot joint.
 """
 
+import time
+
 import numpy as np
 import rclpy
 from rcl_interfaces.msg import SetParametersResult
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+from std_srvs.srv import Empty
 
 
 class GelloOffsetNode(Node):
@@ -44,6 +49,7 @@ class GelloOffsetNode(Node):
         self.declare_parameter('speed_trigger_joint_index', -1)
         self.declare_parameter('speed_max_velocity', 1.0)
         self.declare_parameter('mode_transition_delay_seconds', 5.0)
+        self.declare_parameter('transition_wait_service_name', 'wait_for_transition_complete')
         self.declare_parameter('tf_prefix', '')
         
         # Get parameter values
@@ -59,6 +65,7 @@ class GelloOffsetNode(Node):
         self.speed_trigger_joint_index = self.get_parameter('speed_trigger_joint_index').get_parameter_value().integer_value
         self.speed_max_velocity = self.get_parameter('speed_max_velocity').get_parameter_value().double_value
         self.mode_transition_delay_seconds = self.get_parameter('mode_transition_delay_seconds').get_parameter_value().double_value
+        self.transition_wait_service_name = self.get_parameter('transition_wait_service_name').get_parameter_value().string_value
         
         # State variables
         self.latest_robot_positions = None
@@ -73,9 +80,17 @@ class GelloOffsetNode(Node):
         self.speed_mode_last_update_time = None
         self.speed_mode_target_positions = None
         self.mode_transition_block_until_time = None
+        self.callback_group = ReentrantCallbackGroup()
 
         self.parameter_callback = self.add_on_set_parameters_callback(
             self._on_set_parameters
+        )
+
+        self.transition_wait_service = self.create_service(
+            Empty,
+            self.transition_wait_service_name,
+            self._handle_transition_wait_service,
+            callback_group=self.callback_group,
         )
         
         # Publisher for combined joint-state commands
@@ -90,14 +105,16 @@ class GelloOffsetNode(Node):
             JointState,
             self.robot_joint_state_topic,
             self.robot_joint_state_callback,
-            10
+            10,
+            callback_group=self.callback_group,
         )
         
         self.gello_joint_state_sub = self.create_subscription(
             JointState,
             self.gello_joint_state_topic,
             self.gello_joint_state_callback,
-            10
+            10,
+            callback_group=self.callback_group,
         )
         
         self.get_logger().debug(
@@ -111,7 +128,8 @@ class GelloOffsetNode(Node):
             f'  Speed joint: {self.speed_mode_joint_name or "<last arm joint>"}\n'
             f'  Speed trigger joint index: {self.speed_trigger_joint_index}\n'
             f'  Speed max velocity: {self.speed_max_velocity} rad/s\n'
-            f'  Mode transition delay: {self.mode_transition_delay_seconds} s'
+            f'  Mode transition delay: {self.mode_transition_delay_seconds} s\n'
+            f'  Transition wait service: {self.transition_wait_service_name}'
         )
     
     def robot_joint_state_callback(self, msg):
@@ -229,9 +247,13 @@ class GelloOffsetNode(Node):
 
         previous_mode = self.control_mode
         transitioning_to_normal = previous_mode != 1 and new_control_mode == 1
-        transitioning_between_normal_and_speed = (
-            (previous_mode == 1 and new_control_mode in (2, 3))
-            or (previous_mode in (2, 3) and new_control_mode == 1)
+        transitioning_to_idle = new_control_mode == 0
+        transitioning_to_active_mode = previous_mode == 0 and new_control_mode in (1, 2, 3)
+        transitioning_to_normal_from_idle = previous_mode == 0 and new_control_mode == 1
+        transitioning_between_active_modes = (
+            previous_mode in (1, 2, 3)
+            and new_control_mode in (1, 2, 3)
+            and previous_mode != new_control_mode
         )
 
         if transitioning_to_normal:
@@ -254,7 +276,9 @@ class GelloOffsetNode(Node):
             self.speed_mode_last_update_time = None
             self.speed_mode_target_positions = None
 
-        if transitioning_between_normal_and_speed:
+        if not transitioning_to_idle and not transitioning_to_normal_from_idle and (
+            transitioning_to_active_mode or transitioning_between_active_modes
+        ):
             self.mode_transition_block_until_time = (
                 self.get_clock().now().nanoseconds
                 + int(self.mode_transition_delay_seconds * 1e9)
@@ -302,6 +326,13 @@ class GelloOffsetNode(Node):
 
         self.mode_transition_block_until_time = None
         return False
+
+    def _handle_transition_wait_service(self, _request, response):
+        """Block until the current mode-transition delay has elapsed."""
+        while self._is_mode_transition_block_active():
+            time.sleep(0.05)
+
+        return response
 
     def _publish_speed_mode_command(self, gello_msg):
         """Publish one-joint speed command based on trigger value in [0, 1]."""
@@ -394,7 +425,9 @@ def main():
     node = GelloOffsetNode()
     
     try:
-        rclpy.spin(node)
+        executor = MultiThreadedExecutor()
+        executor.add_node(node)
+        executor.spin()
     except KeyboardInterrupt:
         node.get_logger().info('Shutting down...')
     finally:

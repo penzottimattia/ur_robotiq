@@ -86,7 +86,9 @@ Modes:
 - `2`: positive speed mode for one selected robot joint
 - `3`: negative speed mode for one selected robot joint
 
-When transitioning between normal mode and either speed mode, the node waits for a configurable delay before publishing commands again. The same delay applies when entering speed mode and when returning to `control_mode=1`.
+When transitioning into any non-idle mode, the node normally waits for a configurable delay before publishing commands again. Transitioning to `control_mode=0` is immediate, and `control_mode=0 -> 1` is also immediate.
+
+The node also exposes an empty ROS 2 service named `wait_for_transition_complete` by default. Call the service after a mode change to block until the transition delay has elapsed and the node can publish again.
 
 When transitioning from any mode into `control_mode=1`, the node always recomputes offsets from the latest robot and GELLO joint states before accepting the transition.
 
@@ -104,6 +106,9 @@ ros2 param set /left_gello_offset_node control_mode 2
 
 # Negative speed mode
 ros2 param set /left_gello_offset_node control_mode 3
+
+# Block until the current transition delay has elapsed
+ros2 service call /left_gello_offset_node/wait_for_transition_complete std_srvs/srv/Empty {}
 ```
 
 Speed mode parameters:
@@ -111,7 +116,7 @@ Speed mode parameters:
 - `speed_mode_joint_name`: robot joint to drive in speed mode (empty means the last arm joint)
 - `speed_trigger_joint_index`: index of GELLO joint used as trigger in range `[0, 1]` (default `-1` uses the last GELLO joint)
 - `speed_max_velocity`: maximum angular speed in rad/s scaled by trigger value
-- `mode_transition_delay_seconds`: delay applied when entering or leaving speed mode
+- `mode_transition_delay_seconds`: delay applied when switching into any non-idle mode
 - `gripper_offset`: additional gripper bias applied only in normal mode
 
 Examples:

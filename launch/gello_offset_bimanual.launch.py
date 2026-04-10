@@ -86,6 +86,7 @@ def generate_launch_description():
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('left_gello_id'), '/joint_states'],
                 'control_mode': 1,
                 'mode_transition_delay_seconds': LaunchConfiguration('mode_transition_delay_seconds'),
+                'transition_wait_service_name': '/left_gello_offset_node/wait_for_mode_transition',
             }
         ],
         output='screen',
@@ -107,6 +108,7 @@ def generate_launch_description():
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('right_gello_id'), '/joint_states'],
                 'control_mode': 1,
                 'mode_transition_delay_seconds': LaunchConfiguration('mode_transition_delay_seconds'),
+                'transition_wait_service_name': '/right_gello_offset_node/wait_for_mode_transition',
             }
         ],
         output='screen',
