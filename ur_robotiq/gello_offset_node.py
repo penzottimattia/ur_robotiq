@@ -383,6 +383,7 @@ class GelloOffsetNode(Node):
 
         if self.speed_mode_target_positions is None:
             self.speed_mode_target_positions = np.array(self.latest_robot_positions, copy=True)
+            self.speed_mode_target_positions[-1] += self.gripper_offset  # Ensure gripper offset is applied in speed mode as well
 
         target_positions = np.array(self.speed_mode_target_positions, copy=True)
         delta = direction * trigger * self.speed_max_velocity * dt
