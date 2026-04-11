@@ -1,5 +1,6 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 
@@ -43,6 +44,16 @@ def generate_launch_description():
         default_value='5.0',
         description='Delay in seconds applied when entering or leaving speed mode',
     )
+    use_stitcher_arg = DeclareLaunchArgument(
+        'use_stitcher',
+        default_value='false',
+        description='Launch the GELLO stitcher instead of the offset nodes',
+    )
+    stitched_output_topic_arg = DeclareLaunchArgument(
+        'stitched_output_topic',
+        default_value='/gello_stitched_commands',
+        description='Topic published by the GELLO stitcher when enabled',
+    )
     
     # Left GELLO publisher node
     left_gello_publisher_node = Node(
@@ -69,6 +80,21 @@ def generate_launch_description():
         ],
         output='screen',
     )
+
+    gello_command_stitcher_node = Node(
+        package='ur_robotiq',
+        executable='gello_command_stitcher_node',
+        name='gello_command_stitcher_node',
+        parameters=[
+            {
+                'left_command_topic': ['/gello_', LaunchConfiguration('left_gello_id'), '/command_joints'],
+                'right_command_topic': ['/gello_', LaunchConfiguration('right_gello_id'), '/command_joints'],
+                'output_topic': LaunchConfiguration('stitched_output_topic'),
+            }
+        ],
+        output='screen',
+        condition=IfCondition(LaunchConfiguration('use_stitcher')),
+    )
     
     # Left gello offset node
     left_gello_offset_node = Node(
@@ -90,6 +116,7 @@ def generate_launch_description():
             }
         ],
         output='screen',
+        condition=UnlessCondition(LaunchConfiguration('use_stitcher')),
     )
     
     # Right gello offset node
@@ -112,6 +139,7 @@ def generate_launch_description():
             }
         ],
         output='screen',
+        condition=UnlessCondition(LaunchConfiguration('use_stitcher')),
     )
     
     return LaunchDescription([
@@ -122,8 +150,11 @@ def generate_launch_description():
         right_gripper_min_arg,
         right_gripper_max_arg,
         mode_transition_delay_seconds_arg,
+        use_stitcher_arg,
+        stitched_output_topic_arg,
         left_gello_publisher_node,
         right_gello_publisher_node,
+        gello_command_stitcher_node,
         left_gello_offset_node,
         right_gello_offset_node,
     ])

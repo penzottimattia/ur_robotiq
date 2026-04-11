@@ -31,7 +31,12 @@ def generate_launch_description():
     use_gello_arg = DeclareLaunchArgument(
         'use_gello',
         default_value='false',
-        description='Launch GELLO publishers and offset nodes for teleoperation',
+        description='Launch GELLO teleoperation nodes',
+    )
+    use_gello_stitcher_arg = DeclareLaunchArgument(
+        'use_gello_stitcher',
+        default_value='false',
+        description='Launch GELLO stitcher instead of publishing directly to offset nodes',
     )
     left_program_arg = DeclareLaunchArgument(
         'left_program',
@@ -350,7 +355,7 @@ def generate_launch_description():
 
     # True when using GELLO (teleop) mode
     use_gello = PythonExpression([
-        "'", LaunchConfiguration('use_gello'), "' == 'true'",
+        "'", LaunchConfiguration('use_gello'), "' == 'true' or '", LaunchConfiguration('use_gello_stitcher'), "' == 'true'",
     ])
 
     # Gello launch (includes GELLO publishers and offset nodes)
@@ -362,6 +367,7 @@ def generate_launch_description():
         ]),
         condition=IfCondition(use_gello),
         launch_arguments=[
+            ('use_stitcher', LaunchConfiguration('use_gello_stitcher')),
             ('left_gello_port', LaunchConfiguration('left_gello_port')),
             ('right_gello_port', LaunchConfiguration('right_gello_port')),
             ('mode_transition_delay_seconds', '2.0'),
@@ -424,6 +430,7 @@ def generate_launch_description():
         dashboard_receive_timeout_arg,
         run_setup_node_arg,
         use_gello_arg,
+        use_gello_stitcher_arg,
         left_program_arg,
         right_program_arg,
         left_robot_ip_arg,
