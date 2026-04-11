@@ -43,24 +43,27 @@ class JointStateToTrajectoryNode(Node):
         
         # check if tf_prefix is aleady applied to joint names, and if so, apply it permanently to the gripper joint name
         if msg.name[0].startswith(self.tf_prefix):
-            self.gripper_joint = self.tf_prefix + self.gripper_joint
-            self.tf_prefix = ''
+            gripper_joint = self.tf_prefix + self.gripper_joint
+            tf_prefix = ''
+        else:
+            gripper_joint = self.gripper_joint
+            tf_prefix = self.tf_prefix
         
         gripper_msg = JointTrajectory()
-        gripper_msg.joint_names = [self.tf_prefix + self.gripper_joint]
+        gripper_msg.joint_names = [tf_prefix + gripper_joint]
         
         point = JointTrajectoryPoint()
-        point.positions = [msg.position.pop(msg.name.index(self.gripper_joint))]
+        point.positions = [msg.position.pop(msg.name.index(gripper_joint))]
         point.time_from_start = rclpy.duration.Duration(seconds=msg.header.stamp.sec).to_msg()
         
         gripper_msg.points = [point]
 
         self.gripper_publisher.publish(gripper_msg)
 
-        msg.name.remove(self.gripper_joint)
+        msg.name.remove(gripper_joint)
 
         traj = JointTrajectory()
-        traj.joint_names = [self.tf_prefix + name for name in msg.name]
+        traj.joint_names = [tf_prefix + name for name in msg.name]
 
         point = JointTrajectoryPoint()
         point.positions = msg.position

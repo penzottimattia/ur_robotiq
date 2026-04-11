@@ -371,6 +371,7 @@ def generate_launch_description():
             ('left_gello_port', LaunchConfiguration('left_gello_port')),
             ('right_gello_port', LaunchConfiguration('right_gello_port')),
             ('mode_transition_delay_seconds', '2.0'),
+            ('stitched_output_topic', '/commands')
         ],
     )
 

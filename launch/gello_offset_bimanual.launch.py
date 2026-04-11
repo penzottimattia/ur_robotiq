@@ -1,7 +1,7 @@
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
-from launch.conditions import IfCondition, UnlessCondition
-from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
 
 
@@ -54,6 +54,17 @@ def generate_launch_description():
         default_value='/gello_stitched_commands',
         description='Topic published by the GELLO stitcher when enabled',
     )
+
+    left_command_topic = PythonExpression([
+        "'/gello_' + '", LaunchConfiguration('left_gello_id'),
+        "' + '/command_joints' if '",
+        LaunchConfiguration('use_stitcher'), "' == 'true' else '/left_arm_controller/commands'",
+    ])
+    right_command_topic = PythonExpression([
+        "'/gello_' + '", LaunchConfiguration('right_gello_id'),
+        "' + '/command_joints' if '",
+        LaunchConfiguration('use_stitcher'), "' == 'true' else '/right_arm_controller/commands'",
+    ])
     
     # Left GELLO publisher node
     left_gello_publisher_node = Node(
@@ -81,10 +92,10 @@ def generate_launch_description():
         output='screen',
     )
 
-    gello_command_stitcher_node = Node(
+    gello_stitcher_node = Node(
         package='ur_robotiq',
-        executable='gello_command_stitcher_node',
-        name='gello_command_stitcher_node',
+        executable='gello_stitcher_node',
+        name='gello_stitcher_node',
         parameters=[
             {
                 'left_command_topic': ['/gello_', LaunchConfiguration('left_gello_id'), '/command_joints'],
@@ -108,7 +119,7 @@ def generate_launch_description():
                 'gripper_offset': 0.1,
                 'gripper_joint_name': 'left_robotiq_85_left_knuckle_joint',
                 'robot_joint_state_topic': '/left_state_broadcaster/joint_states',
-                'command_topic': '/left_arm_controller/commands',
+                'command_topic': left_command_topic,
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('left_gello_id'), '/joint_states'],
                 'control_mode': 1,
                 'mode_transition_delay_seconds': LaunchConfiguration('mode_transition_delay_seconds'),
@@ -116,7 +127,6 @@ def generate_launch_description():
             }
         ],
         output='screen',
-        condition=UnlessCondition(LaunchConfiguration('use_stitcher')),
     )
     
     # Right gello offset node
@@ -131,7 +141,7 @@ def generate_launch_description():
                 'gripper_offset': 0.1,
                 'gripper_joint_name': 'right_robotiq_85_left_knuckle_joint',
                 'robot_joint_state_topic': '/right_state_broadcaster/joint_states',
-                'command_topic': '/right_arm_controller/commands',
+                'command_topic': right_command_topic,
                 'gello_joint_state_topic': ['/gello_', LaunchConfiguration('right_gello_id'), '/joint_states'],
                 'control_mode': 1,
                 'mode_transition_delay_seconds': LaunchConfiguration('mode_transition_delay_seconds'),
@@ -139,7 +149,6 @@ def generate_launch_description():
             }
         ],
         output='screen',
-        condition=UnlessCondition(LaunchConfiguration('use_stitcher')),
     )
     
     return LaunchDescription([
@@ -154,7 +163,7 @@ def generate_launch_description():
         stitched_output_topic_arg,
         left_gello_publisher_node,
         right_gello_publisher_node,
-        gello_command_stitcher_node,
+        gello_stitcher_node,
         left_gello_offset_node,
         right_gello_offset_node,
     ])

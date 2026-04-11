@@ -384,7 +384,7 @@ class GelloOffsetNode(Node):
         if self.speed_mode_target_positions is None:
             self.speed_mode_target_positions = np.array(self.latest_robot_positions, copy=True)
 
-        target_positions = np.array(self.latest_robot_positions, copy=True)
+        target_positions = np.array(self.speed_mode_target_positions, copy=True)
         delta = direction * trigger * self.speed_max_velocity * dt
         self.speed_mode_target_positions[speed_joint_index] += delta
         target_positions[speed_joint_index] = self.speed_mode_target_positions[speed_joint_index]
