@@ -146,27 +146,31 @@ Useful launch arguments:
 
 ### 4) Calibrate camera to base
 
-Use the `compute_camera_to_base` node to estimate a camera-to-base transform from a known probe link and an object pose stream in the camera frame.
+Use the `hand_eye_calibration` node to estimate a camera-to-base transform from a known probe frame and an object pose stream in the camera frame.
 
 Example for the left robot:
 
 ```bash
-ros2 run ur_robotiq compute_camera_to_base --ros-args \
-  -p probe_link:=left_probe_link \
+ros2 run ur_robotiq hand_eye_calibration --ros-args \
+  -p probe_frame:=left_probe_link \
   -p base_frame:=left_base_link \
-  -p object_pose_topic:=/object_pose \
+  -p camera_frame:=camera_color_optical_frame \
+  -p pose_topic:=/object_pose \
   -p output_file:=/ws/src/ur_robotiq/config/camera_to_left_base.yaml
 ```
 
 Example for the right robot:
 
 ```bash
-ros2 run ur_robotiq compute_camera_to_base --ros-args \
-  -p probe_link:=right_probe_link \
+ros2 run ur_robotiq hand_eye_calibration --ros-args \
+  -p probe_frame:=right_probe_link \
   -p base_frame:=right_base_link \
-  -p object_pose_topic:=/object_pose \
+  -p camera_frame:=camera_color_optical_frame \
+  -p pose_topic:=/object_pose \
   -p output_file:=/ws/src/ur_robotiq/config/camera_to_right_base.yaml
 ```
+
+The node subscribes to `pose_topic` (default `/object_pose`), averages `samples` pose observations, writes the resulting transform to `output_file`, and also publishes it as a static transform.
 
 The saved YAML uses the `camera_to_base` format and is consumed by `static_tf_broadcaster` from `config/camera_to_base.yaml`.
 
