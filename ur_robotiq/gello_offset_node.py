@@ -389,7 +389,7 @@ class GelloOffsetNode(Node):
         delta = direction * trigger * self.speed_max_velocity * dt
         self.speed_mode_target_positions[speed_joint_index] += delta
         target_positions[speed_joint_index] = self.speed_mode_target_positions[speed_joint_index]
-        target_positions.clip(-2*np.pi, 2*np.pi, out=target_positions)  # Force reasonable joint limits 
+        target_positions.clip(-1.7*np.pi, 1.7*np.pi, out=target_positions)  # Force reasonable joint limits 
 
         self._publish_joint_command(
             joint_names,

@@ -10,6 +10,7 @@ ROS 2 Jazzy package for a bimanual setup with two UR3 manipulators and Robotiq 2
 - Launch files to:
   - visualize the bimanual robot
   - control the bimanual system
+  - calibrate camera-to-base transforms
   - extract left/right UR calibration files
 
 ## Dependencies
@@ -143,7 +144,42 @@ Useful launch arguments:
 - `run_left:=true|false`
 - `run_right:=true|false`
 
-### 4) Export single-unit URDF + meshes (for USD prep)
+### 4) Calibrate camera to base
+
+Use the `compute_camera_to_base` node to estimate a camera-to-base transform from a known probe link and an object pose stream in the camera frame.
+
+Example for the left robot:
+
+```bash
+ros2 run ur_robotiq compute_camera_to_base --ros-args \
+  -p probe_link:=left_probe_link \
+  -p base_frame:=left_base_link \
+  -p object_pose_topic:=/object_pose \
+  -p output_file:=/ws/src/ur_robotiq/config/camera_to_left_base.yaml
+```
+
+Example for the right robot:
+
+```bash
+ros2 run ur_robotiq compute_camera_to_base --ros-args \
+  -p probe_link:=right_probe_link \
+  -p base_frame:=right_base_link \
+  -p object_pose_topic:=/object_pose \
+  -p output_file:=/ws/src/ur_robotiq/config/camera_to_right_base.yaml
+```
+
+The saved YAML uses the `camera_to_base` format and is consumed by `static_tf_broadcaster` from `config/camera_to_base.yaml`.
+
+If you have both left and right camera calibrations, you can derive the relative base transform with:
+
+```bash
+python3 scripts/compute_right_in_left.py \
+  --left config/camera_to_left_base.yaml \
+  --right config/camera_to_right_base.yaml \
+  --output config/left_in_right.yaml
+```
+
+### 5) Export single-unit URDF + meshes (for USD prep)
 
 Use the unit xacro directly and generate one calibrated URDF per calibration file:
 
