@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
+from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -85,6 +86,17 @@ def generate_launch_description():
             'robot_bases.yaml',
         ]),
         description='YAML file with left/right robot base poses',
+    )
+
+    proportional_gain_arg = DeclareLaunchArgument(
+        'proportional_gain',
+        default_value='1.0',
+        description='Proportional gain for arm position controllers (higher values result in stiffer control, but may cause damage to the robot if set too high; typically between 0.5 and 2.0)',
+    )
+    feedforward_gain_arg = DeclareLaunchArgument(
+        'feedforward_gain',
+        default_value='0.1',
+        description='Feedforward gain for velocity commands in arm controllers (helps improve tracking performance, but may cause overshoot if set too high; typically between 0.0 and 0.5)',
     )
 
     controllers_file_arg = DeclareLaunchArgument(
@@ -182,7 +194,7 @@ def generate_launch_description():
 
         params = [
             robot_description,
-            LaunchConfiguration('controllers_file'),
+            ParameterFile(LaunchConfiguration('controllers_file'), allow_substs=True),
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
         ]
         # When using real grippers connected via UR tool I/O, start them
@@ -443,6 +455,8 @@ def generate_launch_description():
         left_gello_port_arg,
         right_gello_port_arg,
         base_poses_file_arg,
+        proportional_gain_arg,
+        feedforward_gain_arg,
         controllers_file_arg,
         gripper_force_multiplier_arg,
         left_calib_file_arg,
