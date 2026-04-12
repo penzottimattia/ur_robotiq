@@ -88,8 +88,8 @@ class CameraToBaseNode(Node):
             # lookup base_T_probe transform from tf
             # using the timestamp from the message to get consistent transforms
             stamp = msg.header.stamp
-            # ROS2 time conversion
-            time = rclpy.time.Time(sec=stamp.sec, nanosec=stamp.nanosec)
+            # ROS 2 time conversion
+            time = rclpy.time.Time.from_msg(stamp)
 
             # Attempt to get transform base <- probe (target_frame=base_frame, source_frame=probe_link)
             try:
