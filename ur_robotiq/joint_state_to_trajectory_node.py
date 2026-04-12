@@ -60,6 +60,9 @@ class JointStateToTrajectoryNode(Node):
 
         self.gripper_publisher.publish(gripper_msg)
 
+        if msg.velocity:
+            msg.velocity.pop(msg.name.index(gripper_joint))
+
         msg.name.remove(gripper_joint)
 
         traj = JointTrajectory()
@@ -67,6 +70,10 @@ class JointStateToTrajectoryNode(Node):
 
         point = JointTrajectoryPoint()
         point.positions = msg.position
+        
+        if msg.velocity:
+            point.velocities = msg.velocity
+
         point.time_from_start = rclpy.duration.Duration(seconds=msg.header.stamp.sec).to_msg()
 
         traj.points = [point]
