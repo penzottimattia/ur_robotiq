@@ -88,7 +88,7 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('ur_robotiq'),
             'config',
-            'left_ur3_calibration.yaml',
+            'left_ur_calibration.yaml',
         ]),
         description='Left robot calibration file.',
     )
@@ -97,7 +97,7 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('ur_robotiq'),
             'config',
-            'right_ur3_calibration.yaml',
+            'right_ur_calibration.yaml',
         ]),
         description='Right robot calibration file.',
     )

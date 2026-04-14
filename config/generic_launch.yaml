@@ -1,0 +1,77 @@
+# Example configuration for generic launch that starts camera TF, spawn markers, and transformers
+# - objects: list of meshes to spawn as visualization markers
+# - transforms: list of input/output topic mappings for tf_pose_transformer
+# - rviz: optional rviz configuration file path
+
+rviz:
+  config: ''
+
+static_camera_tf:
+  enabled: true
+
+objects:
+  - name: vial_tube
+    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
+    pose_topic: /object_pose/vial_tube
+    frame: camera_color_optical_frame
+    scale: 1.0
+
+  - name: cap
+    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
+    pose_topic: /object_pose/cap
+    frame: camera_color_optical_frame
+    scale: 1.0
+
+transforms:
+  - input_topic: /object_pose/vial_tube
+    output_topic: /object_detection/vial_tube
+    target_frame: world
+
+  - input_topic: /object_pose/cap
+    output_topic: /object_detection/cap
+    target_frame: world
+
+# Camera nodes to launch (USB cameras). Each entry will start a
+# `usb_camera_node` from this package with the provided parameters.
+# cameras:
+
+#   - name: realsense
+#     input_topic: /camera/color/image_raw
+#     device: 6
+#     topic: /realsense_camera/color/image_raw
+#     fps: 10.0
+#     output_size: 224
+#     encoding: rgb8
+#     enabled: true
+
+#   - name: right_robot_top_camera
+#     device: 8
+#     topic: /right_top_camera/color/image_raw
+#     fps: 10.0
+#     output_size: 224
+#     encoding: rgb8
+#     enabled: true
+
+#   - name: right_robot_bottom_camera
+#     device: 10
+#     topic: /right_bottom_camera/color/image_raw
+#     fps: 10.0
+#     output_size: 224
+#     encoding: rgb8
+#     enabled: true
+
+#   - name: left_robot_top_camera
+#     device: 12
+#     topic: /left_top_camera/color/image_raw
+#     fps: 10.0
+#     output_size: 224
+#     encoding: rgb8
+#     enabled: true
+
+#   - name: left_robot_bottom_camera
+#     device: 14
+#     topic: /left_bottom_camera/color/image_raw
+#     fps: 10.0
+#     output_size: 224
+#     encoding: rgb8
+#     enabled: true

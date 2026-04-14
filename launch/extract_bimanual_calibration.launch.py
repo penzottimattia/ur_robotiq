@@ -12,12 +12,12 @@ def generate_launch_description():
 
     left_target_file_arg = DeclareLaunchArgument(
         'left_target_filename',
-        default_value='/ws/src/ur_robotiq/config/left_ur3_calibration.yaml',
+        default_value='/ws/src/ur_robotiq/config/left_ur_calibration.yaml',
         description='Output calibration yaml for left robot',
     )
     right_target_file_arg = DeclareLaunchArgument(
         'right_target_filename',
-        default_value='/ws/src/ur_robotiq/config/right_ur3_calibration.yaml',
+        default_value='/ws/src/ur_robotiq/config/right_ur_calibration.yaml',
         description='Output calibration yaml for right robot',
     )
 

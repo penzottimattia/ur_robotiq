@@ -10,14 +10,12 @@ def generate_launch_description():
     mode_arg = DeclareLaunchArgument(
         'mode',
         default_value='full_mock',
-        description='Control mode: full_mock or mock_grippers_only',
+        description='Control mode: full_mock, mock_grippers_only, or calib',
     )
     use_rviz_arg = DeclareLaunchArgument('use_rviz', default_value='true')
     use_gui_arg = DeclareLaunchArgument('use_joint_state_gui', default_value='true')
     use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='false')
 
-    left_robot_ip_arg = DeclareLaunchArgument('left_robot_ip', default_value='0.0.0.0')
-    right_robot_ip_arg = DeclareLaunchArgument('right_robot_ip', default_value='0.0.0.0')
     base_poses_file_arg = DeclareLaunchArgument(
         'base_poses_file',
         default_value=PathJoinSubstitution([
@@ -26,6 +24,28 @@ def generate_launch_description():
             'robot_bases.yaml',
         ]),
         description='YAML file with left/right robot base poses',
+    )
+
+    left_calib_file_arg = DeclareLaunchArgument(
+        'left_calib_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_description'),
+            'config',
+            'ur3',
+            'default_kinematics.yaml',
+        ]),
+        description='YAML file with left robot kinematics calibration',
+    )
+
+    right_calib_file_arg = DeclareLaunchArgument(
+        'right_calib_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_description'),
+            'config',
+            'ur3',
+            'default_kinematics.yaml',
+        ]),
+        description='YAML file with right robot kinematics calibration',
     )
 
     urdf_file = PathJoinSubstitution([
@@ -40,15 +60,19 @@ def generate_launch_description():
     use_mock_grippers = PythonExpression([
         "'", LaunchConfiguration('mode'), "' in ['full_mock', 'mock_grippers_only']",
     ])
+    use_calib_probe = PythonExpression([
+        "'", LaunchConfiguration('mode'), "' == 'calib'",
+    ])
 
     robot_description_content = Command([
         'xacro ',
         urdf_file,
         ' use_mock_hardware:=', use_mock_hardware,
         ' use_mock_grippers:=', use_mock_grippers,
-        ' left_robot_ip:=', LaunchConfiguration('left_robot_ip'),
-        ' right_robot_ip:=', LaunchConfiguration('right_robot_ip'),
+        ' use_calib_probe:=', use_calib_probe,
         ' base_poses_file:=', LaunchConfiguration('base_poses_file'),
+        ' left_calib_file:=', LaunchConfiguration('left_calib_file'),
+        ' right_calib_file:=', LaunchConfiguration('right_calib_file'),
     ])
 
     robot_description = {'robot_description': robot_description_content}
@@ -89,9 +113,9 @@ def generate_launch_description():
         use_rviz_arg,
         use_gui_arg,
         use_sim_time_arg,
-        left_robot_ip_arg,
-        right_robot_ip_arg,
         base_poses_file_arg,
+        left_calib_file_arg,
+        right_calib_file_arg,
         robot_state_publisher,
         joint_state_publisher_gui,
         joint_state_publisher,
