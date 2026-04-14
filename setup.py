@@ -33,6 +33,7 @@ setup(
             'compute_camera_to_base = ur_robotiq.compute_camera_to_base:main',
             'hand_eye_calibration = ur_robotiq.hand_eye_calibration:main',
             'joint_state_to_trajectory_node = ur_robotiq.joint_state_to_trajectory_node:main',
+            'gello_stitcher_node = ur_robotiq.gello_stitcher_node:main',
             'ft_bridge_node = ur_robotiq.ft_bridge_node:main',
             'spawn_mesh_marker = ur_robotiq.spawn_mesh_marker:main',
             'static_camera_tf = ur_robotiq.static_tf_broadcaster:main',

@@ -2,6 +2,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction, TimerAction, ExecuteProcess, IncludeLaunchDescription
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
+from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 
@@ -31,7 +32,12 @@ def generate_launch_description():
     use_gello_arg = DeclareLaunchArgument(
         'use_gello',
         default_value='false',
-        description='Launch GELLO publishers and offset nodes for teleoperation',
+        description='Launch GELLO teleoperation nodes',
+    )
+    use_gello_stitcher_arg = DeclareLaunchArgument(
+        'use_gello_stitcher',
+        default_value='false',
+        description='Launch GELLO stitcher instead of publishing directly to offset nodes',
     )
     left_program_arg = DeclareLaunchArgument(
         'left_program',
@@ -82,6 +88,17 @@ def generate_launch_description():
         description='YAML file with left/right robot base poses',
     )
 
+    proportional_gain_arg = DeclareLaunchArgument(
+        'proportional_gain',
+        default_value='1.0',
+        description='Proportional gain for arm position controllers (higher values result in stiffer control, but may cause damage to the robot if set too high; typically between 0.5 and 2.0)',
+    )
+    feedforward_gain_arg = DeclareLaunchArgument(
+        'feedforward_gain',
+        default_value='0.1',
+        description='Feedforward gain for velocity commands in arm controllers (helps improve tracking performance, but may cause overshoot if set too high; typically between 0.0 and 0.5)',
+    )
+
     controllers_file_arg = DeclareLaunchArgument(
         'controllers_file',
         default_value=PathJoinSubstitution([
@@ -119,6 +136,13 @@ def generate_launch_description():
         'ur_robotiq.urdf',
     ])
 
+    # Gripper configuration
+    gripper_force_multiplier_arg = DeclareLaunchArgument(
+        'gripper_force_multiplier',
+        default_value='0.01',
+        description='Multiplier for gripper force commands (use lower values for more delicate grasping)',
+    )
+
     use_mock_hardware = PythonExpression([
         "'", LaunchConfiguration('mode'), "' == 'full_mock'",
     ])
@@ -147,6 +171,7 @@ def generate_launch_description():
         ' right_gripper_com_port:=', LaunchConfiguration('right_tool_device_name'),
         ' left_tool_tcp_port:=', LaunchConfiguration('left_tool_tcp_port'),
         ' right_tool_tcp_port:=', LaunchConfiguration('right_tool_tcp_port'),
+        ' gripper_force_multiplier:=', LaunchConfiguration('gripper_force_multiplier'),
         # Pass calibration file paths through to the xacro so they are available in the generated robot_description
         ' left_calib_file:=', LaunchConfiguration('left_calib_file'),
         ' right_calib_file:=', LaunchConfiguration('right_calib_file'),
@@ -169,7 +194,7 @@ def generate_launch_description():
 
         params = [
             robot_description,
-            LaunchConfiguration('controllers_file'),
+            ParameterFile(LaunchConfiguration('controllers_file'), allow_substs=True),
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
         ]
         # When using real grippers connected via UR tool I/O, start them
@@ -312,17 +337,11 @@ def generate_launch_description():
         output='screen',
     )
 
-    # True when using GELLO (teleop) mode
-    use_gello = PythonExpression([
-        "'", LaunchConfiguration('use_gello'), "' == 'true'",
-    ])
-
     left_joint_state_to_traj_node = Node(
         package='ur_robotiq',
         executable='joint_state_to_trajectory_node',
         name='left_joint_state_to_trajectory_node',
         output='screen',
-        condition=UnlessCondition(use_gello),
         parameters=[{
             'tf_prefix': 'left_',
             'joint_state_topic': '/left_arm_controller/commands',
@@ -337,7 +356,6 @@ def generate_launch_description():
         executable='joint_state_to_trajectory_node',
         name='right_joint_state_to_trajectory_node',
         output='screen',
-        condition=UnlessCondition(use_gello),
         parameters=[{
             'tf_prefix': 'right_',
             'joint_state_topic': '/right_arm_controller/commands',
@@ -346,6 +364,11 @@ def generate_launch_description():
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
         }],
     )
+
+    # True when using GELLO (teleop) mode
+    use_gello = PythonExpression([
+        "'", LaunchConfiguration('use_gello'), "' == 'true' or '", LaunchConfiguration('use_gello_stitcher'), "' == 'true'",
+    ])
 
     # Gello launch (includes GELLO publishers and offset nodes)
     gello_launch = IncludeLaunchDescription(
@@ -356,8 +379,11 @@ def generate_launch_description():
         ]),
         condition=IfCondition(use_gello),
         launch_arguments=[
+            ('use_stitcher', LaunchConfiguration('use_gello_stitcher')),
             ('left_gello_port', LaunchConfiguration('left_gello_port')),
             ('right_gello_port', LaunchConfiguration('right_gello_port')),
+            ('mode_transition_delay_seconds', '2.0'),
+            ('stitched_output_topic', '/commands')
         ],
     )
 
@@ -417,6 +443,7 @@ def generate_launch_description():
         dashboard_receive_timeout_arg,
         run_setup_node_arg,
         use_gello_arg,
+        use_gello_stitcher_arg,
         left_program_arg,
         right_program_arg,
         left_robot_ip_arg,
@@ -428,8 +455,10 @@ def generate_launch_description():
         left_gello_port_arg,
         right_gello_port_arg,
         base_poses_file_arg,
+        proportional_gain_arg,
+        feedforward_gain_arg,
         controllers_file_arg,
-        # include new calibration launch args
+        gripper_force_multiplier_arg,
         left_calib_file_arg,
         right_calib_file_arg,
         robot_state_publisher,
