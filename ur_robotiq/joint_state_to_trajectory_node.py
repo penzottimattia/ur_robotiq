@@ -14,12 +14,15 @@ class JointStateToTrajectoryNode(Node):
         self.declare_parameter('trajectory_topic', '/joint_trajectory')
         self.declare_parameter('gripper_topic', '/gripper_trajectory')
         self.declare_parameter('gripper_joint', 'gripper_joint')
+        self.declare_parameter('gripper_threshold', 0.0)
 
         self.tf_prefix = self.get_parameter('tf_prefix').get_parameter_value().string_value
         self.joint_state_topic = self.get_parameter('joint_state_topic').get_parameter_value().string_value
         self.trajectory_topic = self.get_parameter('trajectory_topic').get_parameter_value().string_value
         self.gripper_topic = self.get_parameter('gripper_topic').get_parameter_value().string_value
         self.gripper_joint = self.get_parameter('gripper_joint').get_parameter_value().string_value
+        self.gripper_threshold = self.get_parameter('gripper_threshold').get_parameter_value().double_value
+
         self.publisher = self.create_publisher(JointTrajectory, self.trajectory_topic, 10)
         self.gripper_publisher = self.create_publisher(JointTrajectory, self.gripper_topic, 10)
 
@@ -55,6 +58,9 @@ class JointStateToTrajectoryNode(Node):
         point = JointTrajectoryPoint()
         point.positions = [msg.position.pop(msg.name.index(gripper_joint))]
         point.time_from_start = rclpy.duration.Duration(seconds=msg.header.stamp.sec).to_msg()
+
+        if self.gripper_threshold > 0.0:
+            point.positions[0] = 1.0 if point.positions[0] > self.gripper_threshold else 0.0
         
         gripper_msg.points = [point]
 
