@@ -147,6 +147,11 @@ def generate_launch_description():
         default_value='0.0',
         description='Threshold for gripper binary open/close state based on joint position (0.0 to disable, typically around 0.3 for the Robotiq 85 gripper)',
     )
+    gripper_full_close_threshold_arg = DeclareLaunchArgument(
+        'gripper_full_close_threshold',
+        default_value='0.8',
+        description='Joint position threshold above which the gripper is considered fully closed (used for stable grasp once closeure is detected)',
+    )
     gripper_offset_arg = DeclareLaunchArgument(
         'gripper_offset',
         default_value='0.1',
@@ -359,6 +364,7 @@ def generate_launch_description():
             'gripper_topic': '/left_gripper_controller/joint_trajectory',
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
             'gripper_threshold': LaunchConfiguration('gripper_threshold'),
+            'gripper_full_close_threshold': LaunchConfiguration('gripper_full_close_threshold'),
             'gripper_offset': LaunchConfiguration('gripper_offset'),
         }],
     )
@@ -375,6 +381,7 @@ def generate_launch_description():
             'gripper_topic': '/right_gripper_controller/joint_trajectory',
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
             'gripper_threshold': LaunchConfiguration('gripper_threshold'),
+            'gripper_full_close_threshold': LaunchConfiguration('gripper_full_close_threshold'),
             'gripper_offset': LaunchConfiguration('gripper_offset'),
         }],
     )
@@ -474,6 +481,7 @@ def generate_launch_description():
         controllers_file_arg,
         gripper_force_multiplier_arg,
         gripper_threshold_arg,
+        gripper_full_close_threshold_arg,
         gripper_offset_arg,
         left_calib_file_arg,
         right_calib_file_arg,

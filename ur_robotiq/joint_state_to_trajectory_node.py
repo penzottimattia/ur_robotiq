@@ -15,6 +15,7 @@ class JointStateToTrajectoryNode(Node):
         self.declare_parameter('gripper_topic', '/gripper_trajectory')
         self.declare_parameter('gripper_joint', 'gripper_joint')
         self.declare_parameter('gripper_threshold', 0.0)
+        self.declare_parameter('gripper_full_close_threshold', 0.8)
         self.declare_parameter('gripper_offset', 0.0)
 
         self.tf_prefix = self.get_parameter('tf_prefix').get_parameter_value().string_value
@@ -23,6 +24,7 @@ class JointStateToTrajectoryNode(Node):
         self.gripper_topic = self.get_parameter('gripper_topic').get_parameter_value().string_value
         self.gripper_joint = self.get_parameter('gripper_joint').get_parameter_value().string_value
         self.gripper_threshold = self.get_parameter('gripper_threshold').get_parameter_value().double_value
+        self.gripper_full_close_threshold = self.get_parameter('gripper_full_close_threshold').get_parameter_value().double_value
         self.gripper_offset = self.get_parameter('gripper_offset').get_parameter_value().double_value
 
         self.publisher = self.create_publisher(JointTrajectory, self.trajectory_topic, 10)
@@ -63,6 +65,8 @@ class JointStateToTrajectoryNode(Node):
 
         if self.gripper_threshold > 0.0:
             point.positions[0] = 1.0 if point.positions[0] > self.gripper_threshold else 0.0
+        if self.gripper_full_close_threshold > 0.0 and point.positions[0] > self.gripper_full_close_threshold:
+            point.positions[0] = 1.0
         
         gripper_msg.points = [point]
 
