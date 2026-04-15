@@ -43,7 +43,6 @@ class GelloOffsetNode(Node):
         self.declare_parameter('gripper_joint_name', '')
         self.declare_parameter('gripper_min', 0.0)
         self.declare_parameter('gripper_max', 0.8)
-        self.declare_parameter('gripper_offset', 0.1)
         self.declare_parameter('control_mode', 1)
         self.declare_parameter('speed_mode_joint_name', '')
         self.declare_parameter('speed_trigger_joint_index', -1)
@@ -59,7 +58,6 @@ class GelloOffsetNode(Node):
         self.gripper_joint_name = self.get_parameter('gripper_joint_name').get_parameter_value().string_value
         self.gripper_min = self.get_parameter('gripper_min').get_parameter_value().double_value
         self.gripper_max = self.get_parameter('gripper_max').get_parameter_value().double_value
-        self.gripper_offset = self.get_parameter('gripper_offset').get_parameter_value().double_value
         self.control_mode = self.get_parameter('control_mode').get_parameter_value().integer_value
         self.speed_mode_joint_name = self.get_parameter('speed_mode_joint_name').get_parameter_value().string_value
         self.speed_trigger_joint_index = self.get_parameter('speed_trigger_joint_index').get_parameter_value().integer_value
@@ -123,7 +121,6 @@ class GelloOffsetNode(Node):
             f'  Gello joint states: {self.gello_joint_state_topic}\n'
             f'  Command output: {self.command_topic}\n'
             f'  Gripper min/max: {self.gripper_min}/{self.gripper_max}\n'
-            f'  Gripper offset: {self.gripper_offset}\n'
             f'  Control mode: {self.control_mode} (0=idle, 1=normal, 2=pos-speed, 3=neg-speed)\n'
             f'  Speed joint: {self.speed_mode_joint_name or "<last arm joint>"}\n'
             f'  Speed trigger joint index: {self.speed_trigger_joint_index}\n'
@@ -201,7 +198,6 @@ class GelloOffsetNode(Node):
         gripper_value = (
             self.gripper_min
             + (gello_gripper_position * (self.gripper_max - self.gripper_min))
-            + self.gripper_offset
         )
 
         self._publish_joint_command(
@@ -383,7 +379,6 @@ class GelloOffsetNode(Node):
 
         if self.speed_mode_target_positions is None:
             self.speed_mode_target_positions = np.array(self.latest_robot_positions, copy=True)
-            self.speed_mode_target_positions[-1] += self.gripper_offset  # Ensure gripper offset is applied in speed mode as well
 
         target_positions = np.array(self.speed_mode_target_positions, copy=True)
         delta = direction * trigger * self.speed_max_velocity * dt
