@@ -116,7 +116,6 @@ def generate_launch_description():
             {
                 'gripper_min': LaunchConfiguration('left_gripper_min'),
                 'gripper_max': LaunchConfiguration('left_gripper_max'),
-                'gripper_offset': 0.1,
                 'gripper_joint_name': 'left_robotiq_85_left_knuckle_joint',
                 'robot_joint_state_topic': '/left_state_broadcaster/joint_states',
                 'command_topic': left_command_topic,
@@ -138,7 +137,6 @@ def generate_launch_description():
             {
                 'gripper_min': LaunchConfiguration('right_gripper_min'),
                 'gripper_max': LaunchConfiguration('right_gripper_max'),
-                'gripper_offset': 0.1,
                 'gripper_joint_name': 'right_robotiq_85_left_knuckle_joint',
                 'robot_joint_state_topic': '/right_state_broadcaster/joint_states',
                 'command_topic': right_command_topic,
