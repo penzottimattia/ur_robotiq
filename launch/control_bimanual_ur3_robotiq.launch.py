@@ -142,6 +142,21 @@ def generate_launch_description():
         default_value='0.01',
         description='Multiplier for gripper force commands (use lower values for more delicate grasping)',
     )
+    gripper_threshold_arg = DeclareLaunchArgument(
+        'gripper_threshold',
+        default_value='0.0',
+        description='Threshold for gripper binary open/close state based on joint position (0.0 to disable, typically around 0.3 for the Robotiq 85 gripper)',
+    )
+    gripper_full_close_threshold_arg = DeclareLaunchArgument(
+        'gripper_full_close_threshold',
+        default_value='0.8',
+        description='Joint position threshold above which the gripper is considered fully closed (used for stable grasp once closeure is detected)',
+    )
+    gripper_offset_arg = DeclareLaunchArgument(
+        'gripper_offset',
+        default_value='0.1',
+        description='Additional offset added to gripper joint position commands (avoid twiggling around zero)',
+    )
 
     use_mock_hardware = PythonExpression([
         "'", LaunchConfiguration('mode'), "' == 'full_mock'",
@@ -348,6 +363,9 @@ def generate_launch_description():
             'trajectory_topic': '/left_arm_controller/joint_trajectory',
             'gripper_topic': '/left_gripper_controller/joint_trajectory',
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
+            'gripper_threshold': LaunchConfiguration('gripper_threshold'),
+            'gripper_full_close_threshold': LaunchConfiguration('gripper_full_close_threshold'),
+            'gripper_offset': LaunchConfiguration('gripper_offset'),
         }],
     )
 
@@ -362,6 +380,9 @@ def generate_launch_description():
             'trajectory_topic': '/right_arm_controller/joint_trajectory',
             'gripper_topic': '/right_gripper_controller/joint_trajectory',
             'gripper_joint': 'robotiq_85_left_knuckle_joint',
+            'gripper_threshold': LaunchConfiguration('gripper_threshold'),
+            'gripper_full_close_threshold': LaunchConfiguration('gripper_full_close_threshold'),
+            'gripper_offset': LaunchConfiguration('gripper_offset'),
         }],
     )
 
@@ -459,6 +480,9 @@ def generate_launch_description():
         feedforward_gain_arg,
         controllers_file_arg,
         gripper_force_multiplier_arg,
+        gripper_threshold_arg,
+        gripper_full_close_threshold_arg,
+        gripper_offset_arg,
         left_calib_file_arg,
         right_calib_file_arg,
         robot_state_publisher,
