@@ -38,7 +38,7 @@
 	<xacro:arg name="right_tool_tcp_port" default="54322"/>
 	<xacro:arg name="base_poses_file" default="$(find ur_robotiq)/config/robot_bases.yaml"/>
 
-	<xacro:property name="initial_positions_file" value="$(find ur_description)/config/initial_positions.yaml"/>
+	<xacro:property name="initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
 	<xacro:property name="initial_positions" value="${xacro.load_yaml(initial_positions_file)}"/>
 	<xacro:property name="base_poses_path" value="$(arg base_poses_file)"/>
 	<xacro:property name="base_poses" value="${xacro.load_yaml(base_poses_path)}"/>
@@ -54,7 +54,7 @@
 		use_mock_hardware="$(arg use_mock_hardware)"
 		mock_sensor_commands="$(arg mock_sensor_commands)"
 		headless_mode="$(arg headless_mode)"
-		initial_positions="${initial_positions}"
+		initial_positions="${initial_positions['left']}"
 		kinematics_parameters_file="$(arg left_calib_file)"
 		robot_ip="$(arg left_robot_ip)"
 		script_filename="$(arg script_filename)"
@@ -85,7 +85,7 @@
 		use_mock_hardware="$(arg use_mock_hardware)"
 		mock_sensor_commands="$(arg mock_sensor_commands)"
 		headless_mode="$(arg headless_mode)"
-		initial_positions="${initial_positions}"
+		initial_positions="${initial_positions['right']}"
 		kinematics_parameters_file="$(arg right_calib_file)"
 		robot_ip="$(arg right_robot_ip)"
 		script_filename="$(arg script_filename)"

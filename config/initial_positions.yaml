@@ -1,0 +1,17 @@
+# Default joint positions for mock hardware startup.
+
+left:
+  shoulder_pan_joint: 2.0473999977111816
+  shoulder_lift_joint: -1.3269654512405396
+  elbow_joint: 1.7201675176620483
+  wrist_1_joint: -1.972561001777649
+  wrist_2_joint: -1.518337607383728
+  wrist_3_joint: -1.0471872091293335
+
+right:
+  shoulder_pan_joint: 0.011716162785887718
+  shoulder_lift_joint: -2.062084436416626
+  elbow_joint: -1.3161864280700684
+  wrist_1_joint: -1.3685548305511475
+  wrist_2_joint: 1.5812815427780151
+  wrist_3_joint: 3.141587734222412

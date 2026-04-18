@@ -9,7 +9,8 @@
 	<xacro:arg name="gripper_closed_position" default="0.82"/>
 	<xacro:arg name="gripper_force_multiplier" default="0.01"/>
 	<xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
-	<xacro:property name="default_initial_positions" value="${xacro.load_yaml('$(find ur_description)/config/initial_positions.yaml')}"/>
+	<xacro:property name="default_initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
+	<xacro:property name="default_initial_positions" value="${xacro.load_yaml(default_initial_positions_file)['left']}"/>
 
 	<xacro:macro name="robotiq_minimal_ros2_control" params="name prefix use_fake_hardware fake_sensor_commands com_port gripper_closed_position gripper_force_multiplier">
 		<ros2_control name="${name}" type="system">
