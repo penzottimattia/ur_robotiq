@@ -10,25 +10,25 @@ static_camera_tf:
   enabled: true
 
 objects:
-  - name: vial_tube
-    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
-    pose_topic: /object_pose/vial_tube
+  - name: flask
+    mesh: /ws/src/ur_robotiq/object/flask/flask.obj
+    pose_topic: /object_pose/flask
     frame: camera_color_optical_frame
     scale: 1.0
 
-  - name: cap
-    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
-    pose_topic: /object_pose/cap
+  - name: cap_
+    mesh: /ws/src/ur_robotiq/object/cap_/cap_.obj
+    pose_topic: /object_pose/cap_
     frame: camera_color_optical_frame
     scale: 1.0
 
 transforms:
-  - input_topic: /object_pose/vial_tube
-    output_topic: /object_detection/vial_tube
+  - input_topic: /object_pose/flask
+    output_topic: /object_detection/flask
     target_frame: world
 
-  - input_topic: /object_pose/cap
-    output_topic: /object_detection/cap
+  - input_topic: /object_pose/cap_
+    output_topic: /object_detection/cap_
     target_frame: world
 
 # Camera nodes to launch (USB cameras). Each entry will start a

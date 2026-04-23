@@ -36,12 +36,16 @@
 	<xacro:arg name="right_gripper_com_port" default="/tmp/ttyUR_right"/>
 	<xacro:arg name="left_tool_tcp_port" default="54321"/>
 	<xacro:arg name="right_tool_tcp_port" default="54322"/>
-	<xacro:arg name="base_poses_file" default="$(find ur_robotiq)/config/robot_bases.yaml"/>
+	<xacro:arg name="base_poses_file" default="$(find ur_robotiq)/config/left_in_right.yaml"/>
 
 	<xacro:property name="initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
 	<xacro:property name="initial_positions" value="${xacro.load_yaml(initial_positions_file)}"/>
 	<xacro:property name="base_poses_path" value="$(arg base_poses_file)"/>
 	<xacro:property name="base_poses" value="${xacro.load_yaml(base_poses_path)}"/>
+	<xacro:property name="left_base_xyz" value="0 0 0"/>
+	<xacro:property name="left_base_rpy" value="0 0 0"/>
+	<xacro:property name="right_base_xyz" value="${'%s %s %s' % (base_poses['camera_to_base']['transform']['translation']['x'], base_poses['camera_to_base']['transform']['translation']['y'], base_poses['camera_to_base']['transform']['translation']['z'])}"/>
+	<xacro:property name="right_base_rpy" value="${'%s %s %s' % (base_poses['camera_to_base']['transform']['rpy']['r'], base_poses['camera_to_base']['transform']['rpy']['p'], base_poses['camera_to_base']['transform']['rpy']['y'])}"/>
 
 	<link name="world"/>
 
@@ -49,8 +53,8 @@
 		arm_name="left_ur3"
 		tf_prefix="left_"
 		parent="world"
-		base_xyz="${base_poses['left_base_xyz']}"
-		base_rpy="${base_poses['left_base_rpy']}"
+		base_xyz="${left_base_xyz}"
+		base_rpy="${left_base_rpy}"
 		use_mock_hardware="$(arg use_mock_hardware)"
 		mock_sensor_commands="$(arg mock_sensor_commands)"
 		headless_mode="$(arg headless_mode)"
@@ -80,8 +84,8 @@
 		arm_name="right_ur3"
 		tf_prefix="right_"
 		parent="world"
-		base_xyz="${base_poses['right_base_xyz']}"
-		base_rpy="${base_poses['right_base_rpy']}"
+		base_xyz="${right_base_xyz}"
+		base_rpy="${right_base_rpy}"
 		use_mock_hardware="$(arg use_mock_hardware)"
 		mock_sensor_commands="$(arg mock_sensor_commands)"
 		headless_mode="$(arg headless_mode)"

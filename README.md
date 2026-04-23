@@ -21,7 +21,7 @@ docker exec -it ur_robotiq bash -c 'source /opt/ros/humble/ur_robotiq/setup.bash
 ## What this package provides
 
 - Combined bimanual URDF/Xacro model (`urdf/ur_robotiq.urdf`)
-- Robot base pose configuration (`config/robot_bases.yaml`)
+- Robot base transform configuration (`config/left_in_right.yaml`)
 - ros2_control controller configuration (`config/bimanual_controllers.yaml`)
 - Launch files to:
   - visualize the bimanual robot
@@ -62,7 +62,7 @@ Useful launch arguments:
 - `use_joint_state_gui:=true|false`
 - `left_robot_ip:=<ip>`
 - `right_robot_ip:=<ip>`
-- `base_poses_file:=<path/to/yaml>`
+- `base_poses_file:=<path/to/yaml>`  (`config/left_in_right.yaml` is the default)
 
 ### 2) Run bimanual control stack
 
@@ -81,7 +81,7 @@ Useful launch arguments:
 - `left_robot_ip:=<ip>`
 - `right_robot_ip:=<ip>`
 - `controllers_file:=<path/to/controllers.yaml>`
-- `base_poses_file:=<path/to/yaml>`
+- `base_poses_file:=<path/to/yaml>`  (`config/left_in_right.yaml` is the default)
 
 Important parameters:
 
