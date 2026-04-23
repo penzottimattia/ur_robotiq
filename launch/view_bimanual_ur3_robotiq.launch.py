@@ -21,9 +21,9 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('ur_robotiq'),
             'config',
-            'robot_bases.yaml',
+            'left_in_right.yaml',
         ]),
-        description='YAML file with left/right robot base poses',
+        description='YAML file with the left->right base transform',
     )
 
     left_calib_file_arg = DeclareLaunchArgument(
