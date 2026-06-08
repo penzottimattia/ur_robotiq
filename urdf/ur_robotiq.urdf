@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur3_robotiq">
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur3e_robotiq">
 	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
-	<xacro:include filename="$(find ur_robotiq)/urdf/ur3_robotiq_unit.urdf.xacro"/>
+	<xacro:include filename="$(find ur_robotiq)/urdf/ur3e_robotiq_unit.urdf.xacro"/>
 
 	<xacro:arg name="use_mock_hardware" default="true"/>
 	<xacro:arg name="mock_sensor_commands" default="false"/>
@@ -13,8 +13,8 @@
 	<xacro:arg name="use_calib_probe" default="false"/>
 	<xacro:arg name="gripper_force_multiplier" default="0.01"/>
 
-	<xacro:arg name="left_calib_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
-	<xacro:arg name="right_calib_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
+	<xacro:arg name="left_calib_file" default="$(find ur_description)/config/ur3e/default_kinematics.yaml"/>
+	<xacro:arg name="right_calib_file" default="$(find ur_description)/config/ur3e/default_kinematics.yaml"/>
 	<xacro:arg name="left_gripper_calib_file" default="$(find ur_robotiq)/config/default_gripper_kinematics.yaml"/>
 	<xacro:arg name="right_gripper_calib_file" default="$(find ur_robotiq)/config/default_gripper_kinematics.yaml"/>
 
@@ -49,8 +49,8 @@
 
 	<link name="world"/>
 
-	<xacro:ur3_robotiq_unit
-		arm_name="left_ur3"
+	<xacro:ur3e_robotiq_unit
+		arm_name="left_ur3e"
 		tf_prefix="left_"
 		parent="world"
 		base_xyz="${left_base_xyz}"
@@ -80,8 +80,8 @@
 		gripper_force_multiplier="$(arg gripper_force_multiplier)"
 		use_calib_probe="$(arg use_calib_probe)"/>
 
-	<xacro:ur3_robotiq_unit
-		arm_name="right_ur3"
+	<xacro:ur3e_robotiq_unit
+		arm_name="right_ur3e"
 		tf_prefix="right_"
 		parent="world"
 		base_xyz="${right_base_xyz}"
