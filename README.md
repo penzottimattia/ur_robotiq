@@ -36,7 +36,7 @@ source install/setup.bash
 ### 1) Visualize bimanual setup
 
 ```bash
-ros2 launch ur_robotiq view_bimanual_ur3_robotiq.launch.py
+ros2 launch ur_robotiq view_bimanual_ur3e_robotiq.launch.py
 ```
 
 Useful launch arguments:
@@ -51,7 +51,7 @@ Useful launch arguments:
 ### 2) Run bimanual control stack
 
 ```bash
-ros2 launch ur_robotiq control_bimanual_ur3_robotiq.launch.py
+ros2 launch ur_robotiq control_bimanual_ur3e_robotiq.launch.py
 ```
 
 Useful launch arguments:
@@ -189,10 +189,10 @@ Use the unit xacro directly and generate one calibrated URDF per calibration fil
 
 ```bash
 ros2 run ur_robotiq export_unit_assets \
-  --input-xacro /ws/src/ur_robotiq/urdf/ur3_robotiq_unit.urdf.xacro \
-  --output-dir /tmp/ur3_unit_export \
+  --input-xacro /ws/src/ur_robotiq/urdf/ur3e_robotiq_unit.urdf.xacro \
+  --output-dir /tmp/ur3e_unit_export \
   --output-urdf-name unit.urdf \
-  --xacro-args ur_type:=ur3 \
+  --xacro-args ur_type:=ur3e \
   --calibration-files \
     /ws/src/ur_robotiq/config/left_ur_calibration.yaml \
     /ws/src/ur_robotiq/config/right_ur_calibration.yaml \
@@ -201,9 +201,9 @@ ros2 run ur_robotiq export_unit_assets \
 
 Output layout:
 
-- `/tmp/ur3_unit_export/unit_left_ur_calibration.urdf`
-- `/tmp/ur3_unit_export/unit_right_ur_calibration.urdf`
-- `/tmp/ur3_unit_export/meshes/...` (copied visual/collision assets)
+- `/tmp/ur3e_unit_export/unit_left_ur_calibration.urdf`
+- `/tmp/ur3e_unit_export/unit_right_ur_calibration.urdf`
+- `/tmp/ur3e_unit_export/meshes/...` (copied visual/collision assets)
 
 Notes:
 
@@ -215,8 +215,8 @@ Legacy path (already expanded URDF, no per-calibration xacro generation):
 
 ```bash
 ros2 run ur_robotiq export_unit_assets \
-  --input-urdf /tmp/ur3_robotiq_unit_expanded.urdf \
-  --output-dir /tmp/ur3_unit_export \
+  --input-urdf /tmp/ur3e_robotiq_unit_expanded.urdf \
+  --output-dir /tmp/ur3e_unit_export \
   --output-urdf-name unit.urdf \
   --overwrite
 ```
@@ -227,7 +227,7 @@ Launch wrapper (left/right calibration in one command):
 ros2 launch ur_robotiq export_unit_assets.launch.py \
   run_left:=true \
   run_right:=true \
-  output_dir:=/tmp/ur3_unit_export
+  output_dir:=/tmp/ur3e_unit_export
 ```
 
 ## Notes

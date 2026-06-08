@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur3_robotiq_unit">
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur3e_robotiq_unit">
 	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
@@ -8,7 +8,7 @@
 	<xacro:arg name="instantiate_unit" default="false"/>
 	<xacro:arg name="gripper_closed_position" default="0.82"/>
 	<xacro:arg name="gripper_force_multiplier" default="0.01"/>
-	<xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur3/default_kinematics.yaml"/>
+	<xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur3e/default_kinematics.yaml"/>
 	<xacro:property name="default_initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
 	<xacro:property name="default_initial_positions" value="${xacro.load_yaml(default_initial_positions_file)['left']}"/>
 
@@ -44,11 +44,11 @@
 		</ros2_control>
 	</xacro:macro>
 
-	<xacro:macro name="ur3_robotiq_unit" params="
-		arm_name:='ur3' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
+	<xacro:macro name="ur3e_robotiq_unit" params="
+		arm_name:='ur3e' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
 		use_mock_hardware:='true' mock_sensor_commands:='false' headless_mode:='false'
 		initial_positions:=${default_initial_positions}
-		kinematics_parameters_file:='$(find ur_description)/config/ur3/default_kinematics.yaml'
+		kinematics_parameters_file:='$(find ur_description)/config/ur3e/default_kinematics.yaml'
 		robot_ip:='0.0.0.0' script_filename:='$(find ur_client_library)/resources/external_control.urscript'
 		output_recipe_filename:='$(find ur_robot_driver)/resources/rtde_output_recipe.txt'
 		input_recipe_filename:='$(find ur_robot_driver)/resources/rtde_input_recipe.txt'
@@ -66,10 +66,10 @@
 			name="${arm_name}"
 			tf_prefix="${tf_prefix}"
 			parent="${parent}"
-			joint_limits_parameters_file="$(find ur_description)/config/ur3/joint_limits.yaml"
+			joint_limits_parameters_file="$(find ur_description)/config/ur3e/joint_limits.yaml"
 			kinematics_parameters_file="${kinematics_parameters_file}"
-			physical_parameters_file="$(find ur_description)/config/ur3/physical_parameters.yaml"
-			visual_parameters_file="$(find ur_description)/config/ur3/visual_parameters.yaml"
+			physical_parameters_file="$(find ur_description)/config/ur3e/physical_parameters.yaml"
+			visual_parameters_file="$(find ur_description)/config/ur3e/visual_parameters.yaml"
 			safety_limits="true"
 			safety_pos_margin="0.15"
 			safety_k_position="20"
@@ -146,7 +146,7 @@
 
 	<xacro:if value="$(arg instantiate_unit)">
 		<link name="world"/>
-		<xacro:ur3_robotiq_unit
+		<xacro:ur3e_robotiq_unit
 			kinematics_parameters_file="$(arg kinematics_parameters_file)"/>
 	</xacro:if>
 </robot>

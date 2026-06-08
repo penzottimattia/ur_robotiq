@@ -31,7 +31,7 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('ur_description'),
             'config',
-            'ur3',
+            'ur3e',
             'default_kinematics.yaml',
         ]),
         description='YAML file with left robot kinematics calibration',
@@ -42,7 +42,7 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('ur_description'),
             'config',
-            'ur3',
+            'ur3e',
             'default_kinematics.yaml',
         ]),
         description='YAML file with right robot kinematics calibration',

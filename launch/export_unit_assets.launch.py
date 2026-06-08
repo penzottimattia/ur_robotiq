@@ -69,13 +69,13 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('ur_robotiq'),
             'urdf',
-            'ur3_robotiq_unit.urdf.xacro',
+            'ur3e_robotiq_unit.urdf.xacro',
         ]),
         description='Path to the input xacro file.',
     )
     output_dir_arg = DeclareLaunchArgument(
         'output_dir',
-        default_value='/tmp/ur3_unit_export',
+        default_value='/tmp/ur3e_unit_export',
         description='Output folder for exported URDF(s) and meshes.',
     )
     output_urdf_name_arg = DeclareLaunchArgument(
@@ -123,8 +123,8 @@ def generate_launch_description():
     )
     xacro_args_arg = DeclareLaunchArgument(
         'xacro_args',
-        default_value='ur_type:=ur3',
-        description='Extra xacro args as a single string, e.g. "ur_type:=ur3 use_mock_hardware:=true".',
+        default_value='ur_type:=ur3e',
+        description='Extra xacro args as a single string, e.g. "ur_type:=ur3e use_mock_hardware:=true".',
     )
     no_auto_instantiate_unit_arg = DeclareLaunchArgument(
         'no_auto_instantiate_unit',
