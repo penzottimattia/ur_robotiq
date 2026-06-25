@@ -114,7 +114,7 @@ def _launch_setup(context, *args, **kwargs):
                 parameters=[
                     robot_description,
                     transmission_config,
-                    {'prefix': 'left_'},
+                    {'prefix': 'left_hand_'},
                 ],
                 remappings=[
                     ('joint_states', 'joint_states'),
@@ -129,7 +129,7 @@ def _launch_setup(context, *args, **kwargs):
                 parameters=[
                     robot_description,
                     transmission_config,
-                    {'prefix': 'right_'},
+                    {'prefix': 'right_hand_'},
                 ],
                 remappings=[
                     ('joint_states', 'left_remapped_joint_states'),
@@ -171,7 +171,7 @@ def generate_launch_description():
             default_value=PathJoinSubstitution([
                 FindPackageShare('ur_robotiq'),
                 'config',
-                'left_in_right.yaml',
+                'robot_bases.yaml',
             ]),
             description='YAML file with the left->right base transform',
         ),

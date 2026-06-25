@@ -70,7 +70,7 @@
 			laterality="${laterality}"
 			joint_limits_config_file="${joint_limits_config_file}"
 			parent="${tf_prefix}tool0"
-			prefix="${tf_prefix}">
+			prefix="${tf_prefix}hand_">
 			<xacro:if value="${laterality == 'right'}">
 				<origin xyz="0.000111314 0.000000002 0.022566028" rpy="1.570796327 0.000000076 1.570796251"/>
 			</xacro:if>
@@ -81,7 +81,7 @@
 
 		<xacro:mia_hand_ros2_control
 			name="${hand_name}"
-			prefix="${tf_prefix}"
+			prefix="${tf_prefix}hand_"
 			serial_port="${hand_serial_port}"
 			use_mock_hardware="${hand_use_mock_hardware}"/>
 
