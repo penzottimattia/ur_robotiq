@@ -83,7 +83,7 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('ur_robotiq'),
             'config',
-            'left_in_right.yaml',
+            'robot_bases.yaml',
         ]),
         description='YAML file with the left->right base transform',
     )
