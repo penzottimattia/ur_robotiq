@@ -28,7 +28,9 @@
   <exec_depend>ur_robot_driver</exec_depend>
   <exec_depend>ur_calibration</exec_depend>
   <exec_depend>robotiq_description</exec_depend>
-  
+  <exec_depend>mia_hand_description</exec_depend>
+  <exec_depend>mia_hand_ros2_control</exec_depend>
+
   <exec_depend>tf_transformations</exec_depend>
   <exec_depend>ros2controlcli</exec_depend>
   <exec_depend>cv_bridge</exec_depend>

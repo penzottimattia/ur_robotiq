@@ -1,0 +1,92 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur5_mia">
+	<xacro:include filename="$(find ur_robotiq)/urdf/ur5_mia_unit.urdf.xacro"/>
+
+	<xacro:arg name="use_mock_hardware" default="true"/>
+	<xacro:arg name="mock_sensor_commands" default="false"/>
+	<xacro:arg name="use_mock_hands" default="true"/>
+	<xacro:arg name="use_calib_probe" default="false"/>
+
+	<xacro:arg name="left_calib_file" default="$(find ur_description)/config/ur5/default_kinematics.yaml"/>
+	<xacro:arg name="right_calib_file" default="$(find ur_description)/config/ur5/default_kinematics.yaml"/>
+
+	<xacro:arg name="left_robot_ip" default="0.0.0.0"/>
+	<xacro:arg name="right_robot_ip" default="0.0.0.0"/>
+	<xacro:arg name="script_filename" default="$(find ur_client_library)/resources/external_control.urscript"/>
+	<xacro:arg name="input_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_input_recipe.txt"/>
+	<xacro:arg name="output_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_output_recipe.txt"/>
+	<xacro:arg name="left_reverse_port" default="50001"/>
+	<xacro:arg name="left_script_sender_port" default="50002"/>
+	<xacro:arg name="left_trajectory_port" default="50003"/>
+	<xacro:arg name="left_script_command_port" default="50004"/>
+	<xacro:arg name="right_reverse_port" default="50101"/>
+	<xacro:arg name="right_script_sender_port" default="50102"/>
+	<xacro:arg name="right_trajectory_port" default="50103"/>
+	<xacro:arg name="right_script_command_port" default="50104"/>
+	<xacro:arg name="headless_mode" default="false"/>
+	<xacro:arg name="left_hand_serial_port" default="/dev/ttyUSB0"/>
+	<xacro:arg name="right_hand_serial_port" default="/dev/ttyUSB1"/>
+	<xacro:arg name="base_poses_file" default="$(find ur_robotiq)/config/left_in_right.yaml"/>
+
+	<xacro:property name="initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
+	<xacro:property name="initial_positions" value="${xacro.load_yaml(initial_positions_file)}"/>
+	<xacro:property name="base_poses_path" value="$(arg base_poses_file)"/>
+	<xacro:property name="base_poses" value="${xacro.load_yaml(base_poses_path)}"/>
+	<xacro:property name="left_base_xyz" value="0 0 0"/>
+	<xacro:property name="left_base_rpy" value="0 0 0"/>
+	<xacro:property name="right_base_xyz" value="${'%s %s %s' % (base_poses['camera_to_base']['transform']['translation']['x'], base_poses['camera_to_base']['transform']['translation']['y'], base_poses['camera_to_base']['transform']['translation']['z'])}"/>
+	<xacro:property name="right_base_rpy" value="${'%s %s %s' % (base_poses['camera_to_base']['transform']['rpy']['r'], base_poses['camera_to_base']['transform']['rpy']['p'], base_poses['camera_to_base']['transform']['rpy']['y'])}"/>
+
+	<link name="world"/>
+
+	<xacro:ur5_mia_unit
+		arm_name="left_ur5"
+		tf_prefix="left_"
+		laterality="left"
+		parent="world"
+		base_xyz="${left_base_xyz}"
+		base_rpy="${left_base_rpy}"
+		use_mock_hardware="$(arg use_mock_hardware)"
+		mock_sensor_commands="$(arg mock_sensor_commands)"
+		headless_mode="$(arg headless_mode)"
+		initial_positions="${initial_positions['left']}"
+		kinematics_parameters_file="$(arg left_calib_file)"
+		robot_ip="$(arg left_robot_ip)"
+		script_filename="$(arg script_filename)"
+		output_recipe_filename="$(arg output_recipe_filename)"
+		input_recipe_filename="$(arg input_recipe_filename)"
+		reverse_port="$(arg left_reverse_port)"
+		script_sender_port="$(arg left_script_sender_port)"
+		trajectory_port="$(arg left_trajectory_port)"
+		script_command_port="$(arg left_script_command_port)"
+		hand_name="left_mia_hand"
+		hand_serial_port="$(arg left_hand_serial_port)"
+		hand_use_mock_hardware="$(arg use_mock_hands)"
+		use_calib_probe="$(arg use_calib_probe)"/>
+
+	<xacro:ur5_mia_unit
+		arm_name="right_ur5"
+		tf_prefix="right_"
+		laterality="right"
+		parent="world"
+		base_xyz="${right_base_xyz}"
+		base_rpy="${right_base_rpy}"
+		use_mock_hardware="$(arg use_mock_hardware)"
+		mock_sensor_commands="$(arg mock_sensor_commands)"
+		headless_mode="$(arg headless_mode)"
+		initial_positions="${initial_positions['right']}"
+		kinematics_parameters_file="$(arg right_calib_file)"
+		robot_ip="$(arg right_robot_ip)"
+		script_filename="$(arg script_filename)"
+		output_recipe_filename="$(arg output_recipe_filename)"
+		input_recipe_filename="$(arg input_recipe_filename)"
+		reverse_port="$(arg right_reverse_port)"
+		script_sender_port="$(arg right_script_sender_port)"
+		trajectory_port="$(arg right_trajectory_port)"
+		script_command_port="$(arg right_script_command_port)"
+		hand_name="right_mia_hand"
+		hand_serial_port="$(arg right_hand_serial_port)"
+		hand_use_mock_hardware="$(arg use_mock_hands)"
+		use_calib_probe="$(arg use_calib_probe)"/>
+
+</robot>

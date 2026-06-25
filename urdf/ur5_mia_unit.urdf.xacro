@@ -1,0 +1,134 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur5_mia_unit">
+	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
+	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
+	<xacro:include filename="$(find mia_hand_description)/urdf/mia_hand.urdf.xacro"/>
+	<xacro:include filename="$(find mia_hand_ros2_control)/description/ros2_control/mia_hand.ros2_control.xacro"/>
+
+	<xacro:arg name="instantiate_unit" default="false"/>
+	<xacro:arg name="laterality" default="right"/>
+	<xacro:arg name="kinematics_parameters_file" default="$(find ur_description)/config/ur5/default_kinematics.yaml"/>
+	<xacro:property name="default_initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
+	<xacro:property name="default_initial_positions" value="${xacro.load_yaml(default_initial_positions_file)['left']}"/>
+
+	<xacro:macro name="ur5_mia_unit" params="
+		arm_name:='ur5' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
+		laterality:='right'
+		use_mock_hardware:='true' mock_sensor_commands:='false' headless_mode:='false'
+		initial_positions:=${default_initial_positions}
+		kinematics_parameters_file:='$(find ur_description)/config/ur5/default_kinematics.yaml'
+		robot_ip:='0.0.0.0' script_filename:='$(find ur_client_library)/resources/external_control.urscript'
+		output_recipe_filename:='$(find ur_robot_driver)/resources/rtde_output_recipe.txt'
+		input_recipe_filename:='$(find ur_robot_driver)/resources/rtde_input_recipe.txt'
+		reverse_port:='50001' script_sender_port:='50002' trajectory_port:='50003' script_command_port:='50004'
+		use_tool_communication:='false' tool_voltage:='24'
+		tool_parity:='0' tool_baud_rate:='115200' tool_stop_bits:='1'
+		tool_rx_idle_chars:='1.5' tool_tx_idle_chars:='3.5'
+		tool_device_name:='/tmp/ttyUR' tool_tcp_port:='54321'
+		hand_name:='mia_hand' hand_serial_port:='/dev/ttyUSB0'
+		hand_use_mock_hardware:='true'
+		joint_limits_config_file:='joint_limits_default.yaml'
+		use_calib_probe:='false'
+	">
+		<xacro:ur_robot
+			name="${arm_name}"
+			tf_prefix="${tf_prefix}"
+			parent="${parent}"
+			joint_limits_parameters_file="$(find ur_description)/config/ur5/joint_limits.yaml"
+			kinematics_parameters_file="${kinematics_parameters_file}"
+			physical_parameters_file="$(find ur_description)/config/ur5/physical_parameters.yaml"
+			visual_parameters_file="$(find ur_description)/config/ur5/visual_parameters.yaml"
+			safety_limits="true"
+			safety_pos_margin="0.15"
+			safety_k_position="20"
+			generate_ros2_control_tag="true"
+			use_fake_hardware="${use_mock_hardware}"
+			fake_sensor_commands="${mock_sensor_commands}"
+			headless_mode="${headless_mode}"
+			initial_positions="${initial_positions}"
+			robot_ip="${robot_ip}"
+			script_filename="${script_filename}"
+			output_recipe_filename="${output_recipe_filename}"
+			input_recipe_filename="${input_recipe_filename}"
+			reverse_port="${reverse_port}"
+			script_sender_port="${script_sender_port}"
+			trajectory_port="${trajectory_port}"
+			script_command_port="${script_command_port}"
+			use_tool_communication="${use_tool_communication}"
+			tool_voltage="${tool_voltage}"
+			tool_parity="${tool_parity}"
+			tool_baud_rate="${tool_baud_rate}"
+			tool_stop_bits="${tool_stop_bits}"
+			tool_rx_idle_chars="${tool_rx_idle_chars}"
+			tool_tx_idle_chars="${tool_tx_idle_chars}"
+			tool_device_name="${tool_device_name}"
+			tool_tcp_port="${tool_tcp_port}">
+			<origin xyz="${base_xyz}" rpy="${base_rpy}"/>
+		</xacro:ur_robot>
+
+		<xacro:mia_hand
+			laterality="${laterality}"
+			joint_limits_config_file="${joint_limits_config_file}"
+			parent="${tf_prefix}tool0"
+			prefix="${tf_prefix}">
+			<xacro:if value="${laterality == 'right'}">
+				<origin xyz="0.000111314 0.000000002 0.022566028" rpy="1.570796327 0.000000076 1.570796251"/>
+			</xacro:if>
+			<xacro:if value="${laterality == 'left'}">
+				<origin xyz="0.000111314 0.000000002 0.022566028" rpy="-1.570796327 0.000000076 1.570796251"/>
+			</xacro:if>
+		</xacro:mia_hand>
+
+		<xacro:mia_hand_ros2_control
+			name="${hand_name}"
+			prefix="${tf_prefix}"
+			serial_port="${hand_serial_port}"
+			use_mock_hardware="${hand_use_mock_hardware}"/>
+
+		<xacro:if value="${use_calib_probe}">
+			<link name="${tf_prefix}probe_link">
+				<visual>
+					<geometry>
+						<mesh filename="package://ur_robotiq/meshes/triangle.obj"/>
+					</geometry>
+				</visual>
+			</link>
+			<joint name="${tf_prefix}probe_joint" type="fixed">
+				<parent link="${tf_prefix}tool0"/>
+				<child link="${tf_prefix}probe_link"/>
+				<origin xyz="0 0 0.15" rpy="1.57 0 0"/>
+			</joint>
+		</xacro:if>
+
+		<link name="${tf_prefix}dorsum_link"/>
+
+		<joint name="${tf_prefix}dorsum_joint" type="fixed">
+			<parent link="${tf_prefix}wrist_3_link"/>
+			<child link="${tf_prefix}dorsum_link"/>
+			<xacro:if value="${laterality == 'right'}">
+				<origin xyz="-0.05 0.03 0.073" rpy="0 0 0"/>
+			</xacro:if>
+			<xacro:if value="${laterality == 'left'}">
+				<origin xyz="0.05 0.03 0.073" rpy="0 0 0"/>
+			</xacro:if>
+		</joint>
+
+	</xacro:macro>
+
+	<xacro:if value="$(arg instantiate_unit)">
+		<link name="world"/>
+		<xacro:property name="instantiate_initial_positions_all" value="${xacro.load_yaml(default_initial_positions_file)}"/>
+		<xacro:if value="${'right' == '$(arg laterality)'}">
+			<xacro:ur5_mia_unit
+				laterality="$(arg laterality)"
+				initial_positions="${instantiate_initial_positions_all['right']}"
+				kinematics_parameters_file="$(arg kinematics_parameters_file)"/>
+		</xacro:if>
+		<xacro:if value="${'left' == '$(arg laterality)'}">
+			<xacro:ur5_mia_unit
+				laterality="$(arg laterality)"
+				initial_positions="${instantiate_initial_positions_all['left']}"
+				kinematics_parameters_file="$(arg kinematics_parameters_file)"/>
+		</xacro:if>
+	</xacro:if>
+</robot>
