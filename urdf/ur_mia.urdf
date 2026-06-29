@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur5_mia">
-	<xacro:include filename="$(find ur_robotiq)/urdf/ur5_mia_unit.urdf.xacro"/>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur_mia">
+	<xacro:include filename="$(find ur_robotiq)/urdf/ur_mia_unit.urdf.xacro"/>
 
 	<xacro:arg name="use_mock_hardware" default="true"/>
 	<xacro:arg name="mock_sensor_commands" default="false"/>
@@ -39,7 +39,7 @@
 
 	<link name="world"/>
 
-	<xacro:ur5_mia_unit
+	<xacro:ur_mia_unit
 		arm_name="left_ur5"
 		tf_prefix="left_"
 		laterality="left"
@@ -64,7 +64,7 @@
 		hand_use_mock_hardware="$(arg use_mock_hands)"
 		use_calib_probe="$(arg use_calib_probe)"/>
 
-	<xacro:ur5_mia_unit
+	<xacro:ur_mia_unit
 		arm_name="right_ur5"
 		tf_prefix="right_"
 		laterality="right"

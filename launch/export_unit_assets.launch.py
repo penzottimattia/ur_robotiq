@@ -69,7 +69,7 @@ def generate_launch_description():
         default_value=PathJoinSubstitution([
             FindPackageShare('ur_robotiq'),
             'urdf',
-            'ur3e_robotiq_unit.urdf.xacro',
+            'ur_robotiq_unit.urdf.xacro',
         ]),
         description='Path to the input xacro file.',
     )

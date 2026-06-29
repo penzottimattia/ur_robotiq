@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur5_mia_unit">
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur_mia_unit">
 	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
 	<xacro:include filename="$(find mia_hand_description)/urdf/mia_hand.urdf.xacro"/>
@@ -11,7 +11,7 @@
 	<xacro:property name="default_initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
 	<xacro:property name="default_initial_positions" value="${xacro.load_yaml(default_initial_positions_file)['left']}"/>
 
-	<xacro:macro name="ur5_mia_unit" params="
+	<xacro:macro name="ur_mia_unit" params="
 		arm_name:='ur5' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
 		laterality:='right'
 		use_mock_hardware:='true' mock_sensor_commands:='false' headless_mode:='false'
@@ -119,13 +119,13 @@
 		<link name="world"/>
 		<xacro:property name="instantiate_initial_positions_all" value="${xacro.load_yaml(default_initial_positions_file)}"/>
 		<xacro:if value="${'right' == '$(arg laterality)'}">
-			<xacro:ur5_mia_unit
+			<xacro:ur_mia_unit
 				laterality="$(arg laterality)"
 				initial_positions="${instantiate_initial_positions_all['right']}"
 				kinematics_parameters_file="$(arg kinematics_parameters_file)"/>
 		</xacro:if>
 		<xacro:if value="${'left' == '$(arg laterality)'}">
-			<xacro:ur5_mia_unit
+			<xacro:ur_mia_unit
 				laterality="$(arg laterality)"
 				initial_positions="${instantiate_initial_positions_all['left']}"
 				kinematics_parameters_file="$(arg kinematics_parameters_file)"/>

@@ -13,7 +13,8 @@ class JointStateToTrajectoryNode(Node):
         self.declare_parameter('joint_state_topic', '/joint_states')
         self.declare_parameter('trajectory_topic', '/joint_trajectory')
         self.declare_parameter('gripper_topic', '/gripper_trajectory')
-        self.declare_parameter('gripper_joint', 'gripper_joint')
+        self.declare_parameter('gripper_joint', '')
+        self.declare_parameter('gripper_joint_list', [])
         self.declare_parameter('gripper_threshold', 0.0)
         self.declare_parameter('gripper_full_close_threshold', 0.8)
         self.declare_parameter('gripper_offset', 0.0)
@@ -23,6 +24,7 @@ class JointStateToTrajectoryNode(Node):
         self.trajectory_topic = self.get_parameter('trajectory_topic').get_parameter_value().string_value
         self.gripper_topic = self.get_parameter('gripper_topic').get_parameter_value().string_value
         self.gripper_joint = self.get_parameter('gripper_joint').get_parameter_value().string_value
+        self.gripper_joint_list = self.get_parameter('gripper_joint_list').get_parameter_value().string_array_value + [self.gripper_joint]
         self.gripper_threshold = self.get_parameter('gripper_threshold').get_parameter_value().double_value
         self.gripper_full_close_threshold = self.get_parameter('gripper_full_close_threshold').get_parameter_value().double_value
         self.gripper_offset = self.get_parameter('gripper_offset').get_parameter_value().double_value
@@ -50,17 +52,17 @@ class JointStateToTrajectoryNode(Node):
         
         # check if tf_prefix is aleady applied to joint names, and if so, apply it permanently to the gripper joint name
         if msg.name[0].startswith(self.tf_prefix):
-            gripper_joint = self.tf_prefix + self.gripper_joint
+            gripper_joints = [self.tf_prefix + joint for joint in self.gripper_joint_list]
             tf_prefix = ''
         else:
-            gripper_joint = self.gripper_joint
+            gripper_joints = [joint for joint in self.gripper_joint_list]
             tf_prefix = self.tf_prefix
         
         gripper_msg = JointTrajectory()
-        gripper_msg.joint_names = [tf_prefix + gripper_joint]
+        gripper_msg.joint_names = [tf_prefix + joint for joint in gripper_joints]
         
         point = JointTrajectoryPoint()
-        point.positions = [msg.position.pop(msg.name.index(gripper_joint)) + self.gripper_offset]
+        point.positions = [msg.position.pop(msg.name.index(gripper_joint)) + self.gripper_offset for gripper_joint in gripper_joints]
         point.time_from_start = rclpy.duration.Duration(seconds=msg.header.stamp.sec).to_msg()
 
         if self.gripper_threshold > 0.0:
@@ -73,9 +75,11 @@ class JointStateToTrajectoryNode(Node):
         self.gripper_publisher.publish(gripper_msg)
 
         if msg.velocity:
-            msg.velocity.pop(msg.name.index(gripper_joint))
+            for gripper_joint in gripper_joints:
+                msg.velocity.pop(msg.name.index(gripper_joint))
 
-        msg.name.remove(gripper_joint)
+        for gripper_joint in gripper_joints:
+            msg.name.remove(gripper_joint)
 
         traj = JointTrajectory()
         traj.joint_names = [tf_prefix + name for name in msg.name]
