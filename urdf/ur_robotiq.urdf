@@ -1,10 +1,10 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur3e_robotiq">
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur_robotiq">
 	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
-	<xacro:include filename="$(find ur_robotiq)/urdf/ur3e_robotiq_unit.urdf.xacro"/>
+	<xacro:include filename="$(find ur_robotiq)/urdf/ur_robotiq_unit.urdf.xacro"/>
 
 	<xacro:arg name="use_mock_hardware" default="true"/>
 	<xacro:arg name="mock_sensor_commands" default="false"/>
@@ -49,7 +49,7 @@
 
 	<link name="world"/>
 
-	<xacro:ur3e_robotiq_unit
+	<xacro:ur_robotiq_unit
 		arm_name="left_ur3e"
 		tf_prefix="left_"
 		parent="world"
@@ -80,7 +80,7 @@
 		gripper_force_multiplier="$(arg gripper_force_multiplier)"
 		use_calib_probe="$(arg use_calib_probe)"/>
 
-	<xacro:ur3e_robotiq_unit
+	<xacro:ur_robotiq_unit
 		arm_name="right_ur3e"
 		tf_prefix="right_"
 		parent="world"

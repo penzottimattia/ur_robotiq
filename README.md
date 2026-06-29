@@ -36,7 +36,7 @@ source install/setup.bash
 ### 1) Visualize bimanual setup
 
 ```bash
-ros2 launch ur_robotiq view_bimanual_ur3e_robotiq.launch.py
+ros2 launch ur_robotiq view_bimanual_ur_robotiq.launch.py
 ```
 
 Useful launch arguments:
@@ -51,7 +51,7 @@ Useful launch arguments:
 ### 2) Run bimanual control stack
 
 ```bash
-ros2 launch ur_robotiq control_bimanual_ur3e_robotiq.launch.py
+ros2 launch ur_robotiq control_bimanual_ur_robotiq.launch.py
 ```
 
 Useful launch arguments:
@@ -189,7 +189,7 @@ Use the unit xacro directly and generate one calibrated URDF per calibration fil
 
 ```bash
 ros2 run ur_robotiq export_unit_assets \
-  --input-xacro /ws/src/ur_robotiq/urdf/ur3e_robotiq_unit.urdf.xacro \
+  --input-xacro /ws/src/ur_robotiq/urdf/ur_robotiq_unit.urdf.xacro \
   --output-dir /tmp/ur3e_unit_export \
   --output-urdf-name unit.urdf \
   --xacro-args ur_type:=ur3e \
@@ -215,7 +215,7 @@ Legacy path (already expanded URDF, no per-calibration xacro generation):
 
 ```bash
 ros2 run ur_robotiq export_unit_assets \
-  --input-urdf /tmp/ur3e_robotiq_unit_expanded.urdf \
+  --input-urdf /tmp/ur_robotiq_unit_expanded.urdf \
   --output-dir /tmp/ur3e_unit_export \
   --output-urdf-name unit.urdf \
   --overwrite

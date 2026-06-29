@@ -37,18 +37,18 @@ def _launch_setup(context, *args, **kwargs):
     base_poses_file = LaunchConfiguration('base_poses_file').perform(context)
     left_calib_file = _resolve_calib_file(
         LaunchConfiguration('left_calib_file').perform(context),
-        'ur5' if setup == 'ur5_mia' else 'ur3e',
+        'ur5' if setup == 'ur_mia' else 'ur3e',
     )
     right_calib_file = _resolve_calib_file(
         LaunchConfiguration('right_calib_file').perform(context),
-        'ur5' if setup == 'ur5_mia' else 'ur3e',
+        'ur5' if setup == 'ur_mia' else 'ur3e',
     )
 
     use_mock_hardware = mode == 'full_mock'
     use_calib_probe = mode == 'calib'
     use_mock_end_effectors = mode in ('full_mock', 'mock_grippers_only')
 
-    urdf_name = 'ur5_mia.urdf' if setup == 'ur5_mia' else 'ur_robotiq.urdf'
+    urdf_name = 'ur_mia.urdf' if setup == 'ur_mia' else 'ur_robotiq.urdf'
     urdf_file = os.path.join(
         get_package_share_directory('ur_robotiq'),
         'urdf',
@@ -65,7 +65,7 @@ def _launch_setup(context, *args, **kwargs):
         f' right_calib_file:={right_calib_file}',
     ]
 
-    if setup == 'ur5_mia':
+    if setup == 'ur_mia':
         xacro_cmd.append(
             f' use_mock_hands:={"true" if use_mock_end_effectors else "false"}',
         )
@@ -85,7 +85,7 @@ def _launch_setup(context, *args, **kwargs):
             output='screen',
             parameters=[robot_description, {'use_sim_time': use_sim_time}],
             remappings=[('joint_states', 'remapped_joint_states')]
-            if setup == 'ur5_mia'
+            if setup == 'ur_mia'
             else [],
         ),
         Node(
@@ -104,7 +104,7 @@ def _launch_setup(context, *args, **kwargs):
         ),
     ]
 
-    if setup == 'ur5_mia':
+    if setup == 'ur_mia':
         nodes.extend([
             Node(
                 package='mia_hand_description',
@@ -155,8 +155,8 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             'setup',
-            default_value='ur3e_robotiq',
-            description='Robot configuration: ur3e_robotiq or ur5_mia',
+            default_value='ur_robotiq',
+            description='Robot configuration: ur_robotiq or ur_mia',
         ),
         DeclareLaunchArgument(
             'mode',

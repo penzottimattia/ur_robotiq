@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur3e_robotiq_unit">
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="ur_robotiq_unit">
 	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
 	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
 	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
@@ -32,7 +32,7 @@
 			<joint name="${prefix}robotiq_85_left_knuckle_joint">
 				<command_interface name="position"/>
 				<state_interface name="position">
-					<param name="initial_value">${initial_positions['gripper_joint']}</param>
+					<param name="initial_value">${initial_positions['gripper_joint'] if 'gripper_joint' in initial_positions else 0.0}</param>
 				</state_interface>
 				<state_interface name="velocity"/>
 			</joint>
@@ -44,7 +44,7 @@
 		</ros2_control>
 	</xacro:macro>
 
-	<xacro:macro name="ur3e_robotiq_unit" params="
+	<xacro:macro name="ur_robotiq_unit" params="
 		arm_name:='ur3e' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
 		use_mock_hardware:='true' mock_sensor_commands:='false' headless_mode:='false'
 		initial_positions:=${default_initial_positions}
@@ -146,7 +146,7 @@
 
 	<xacro:if value="$(arg instantiate_unit)">
 		<link name="world"/>
-		<xacro:ur3e_robotiq_unit
+		<xacro:ur_robotiq_unit
 			kinematics_parameters_file="$(arg kinematics_parameters_file)"/>
 	</xacro:if>
 </robot>
