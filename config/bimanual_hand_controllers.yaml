@@ -17,17 +17,17 @@ controller_manager:
     right_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
 
-    left_fts_broadcaster:
-      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
-
-    right_fts_broadcaster:
-      type: force_torque_sensor_broadcaster/ForceTorqueSensorBroadcaster
-
     left_gripper_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
     right_gripper_controller:
       type: joint_trajectory_controller/JointTrajectoryController
+
+    left_cartesian_controller:
+      type: cartesian_motion_controller/CartesianMotionController
+    
+    right_cartesian_controller:
+      type: cartesian_motion_controller/CartesianMotionController
 
 left_gripper_controller:
   ros__parameters:
@@ -137,28 +137,52 @@ right_state_broadcaster:
       - position
       - velocity
 
-left_fts_broadcaster:
+left_cartesian_controller:
   ros__parameters:
-    sensor_name: left_tcp_fts_sensor
-    state_interface_names:
-      - force.x
-      - force.y
-      - force.z
-      - torque.x
-      - torque.y
-      - torque.z
-    frame_id: left_ft_sensor_frame
-    topic_name: ft_data
+    end_effector_link: left_tool0
+    robot_base_link: left_base_link
+    joints:
+      - left_shoulder_pan_joint
+      - left_shoulder_lift_joint
+      - left_elbow_joint
+      - left_wrist_1_joint
+      - left_wrist_2_joint
+      - left_wrist_3_joint 
+    command_interfaces:
+      - position
+    solver:
+        error_scale: 1.0
+        iterations: 10
+        publish_state_feedback: True
+    pd_gains:
+        trans_x: {p: 1.0}
+        trans_y: {p: 1.0}
+        trans_z: {p: 1.0}
+        rot_x: {p: 0.5}
+        rot_y: {p: 0.5}
+        rot_z: {p: 0.5}
 
-right_fts_broadcaster:
+right_cartesian_controller:
   ros__parameters:
-    sensor_name: right_tcp_fts_sensor
-    state_interface_names:
-      - force.x
-      - force.y
-      - force.z
-      - torque.x
-      - torque.y
-      - torque.z
-    frame_id: right_ft_sensor_frame
-    topic_name: ft_data
+    end_effector_link: right_tool0
+    robot_base_link: right_base_link
+    joints:
+      - right_shoulder_pan_joint
+      - right_shoulder_lift_joint
+      - right_elbow_joint
+      - right_wrist_1_joint
+      - right_wrist_2_joint
+      - right_wrist_3_joint 
+    command_interfaces:
+      - position
+    solver:
+        error_scale: 1.0
+        iterations: 10
+        publish_state_feedback: True
+    pd_gains:
+        trans_x: {p: 1.0}
+        trans_y: {p: 1.0}
+        trans_z: {p: 1.0}
+        rot_x: {p: 0.5}
+        rot_y: {p: 0.5}
+        rot_z: {p: 0.5}

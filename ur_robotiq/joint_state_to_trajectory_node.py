@@ -3,6 +3,7 @@ import time
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, HistoryPolicy, ReliabilityPolicy
+from rclpy.parameter import Parameter
 from sensor_msgs.msg import JointState
 from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
 
@@ -14,7 +15,7 @@ class JointStateToTrajectoryNode(Node):
         self.declare_parameter('trajectory_topic', '/joint_trajectory')
         self.declare_parameter('gripper_topic', '/gripper_trajectory')
         self.declare_parameter('gripper_joint', '')
-        self.declare_parameter('gripper_joint_list', [])
+        self.declare_parameter('gripper_joint_list', Parameter.Type.STRING_ARRAY)
         self.declare_parameter('gripper_threshold', 0.0)
         self.declare_parameter('gripper_full_close_threshold', 0.8)
         self.declare_parameter('gripper_offset', 0.0)
