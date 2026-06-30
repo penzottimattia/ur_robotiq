@@ -36,7 +36,11 @@ def generate_launch_description():
         ]),
         description='YAML file with the left->right base transform',
     )
-
+    use_trackers_arg = DeclareLaunchArgument(
+        'use_trackers',
+        default_value='false',
+        description='Launch VIVE trackers for arm control (requires libsurvive node running)',
+    )
     proportional_gain_arg = DeclareLaunchArgument(
         'proportional_gain',
         default_value='1.0',
@@ -95,11 +99,6 @@ def generate_launch_description():
         "'", LaunchConfiguration('mode'), "' == 'calib'",
     ])
 
-    # True when using real grippers attached to the robot (not in any mock mode)
-    real_grippers = PythonExpression([
-        "'", LaunchConfiguration('mode'), "' not in ['full_mock', 'mock_grippers_only']",
-    ])
-
     robot_description_content = Command([
         'xacro ',
         urdf_file,
@@ -112,6 +111,8 @@ def generate_launch_description():
         # Pass calibration file paths through to the xacro so they are available in the generated robot_description
         ' left_calib_file:=', LaunchConfiguration('left_calib_file'),
         ' right_calib_file:=', LaunchConfiguration('right_calib_file'),
+        ' left_hand_serial_port:=', LaunchConfiguration('left_mia_port'),
+        ' right_hand_serial_port:=', LaunchConfiguration('right_mia_port'),
     ])
 
     robot_description = {'robot_description': robot_description_content}
@@ -143,7 +144,7 @@ def generate_launch_description():
     joint_state_broadcaster_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['joint_state_broadcaster', 'left_state_broadcaster', 'left_fts_broadcaster', 'right_state_broadcaster', 'right_fts_broadcaster', '--controller-manager', '/controller_manager'],
+        arguments=['joint_state_broadcaster', 'left_state_broadcaster', 'right_state_broadcaster', '--controller-manager', '/controller_manager'],
         output='screen',
     )
 
@@ -151,6 +152,13 @@ def generate_launch_description():
         package='controller_manager',
         executable='spawner',
         arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager'],
+        output='screen',
+    )
+
+    stopped_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['left_cartesian_controller', 'right_cartesian_controller', '--controller-manager', '/controller_manager', '--inactive'],
         output='screen',
     )
 
@@ -182,11 +190,46 @@ def generate_launch_description():
         }],
     )
 
+    left_tracker_launch = IncludeLaunchDescription(
+        PathJoinSubstitution([
+            FindPackageShare('libsurvive_arm_control'),
+            'launch',
+            'libsurvive_arm_control.launch.py',
+        ]),
+        condition=IfCondition(LaunchConfiguration('use_trackers')),
+        launch_arguments=[
+            ('tracker_frame_id', 'LHR-428A547D'),
+            ('tool_frame_id', 'left_tool0'),
+            ('base_frame_id', 'left_base_link'),
+            ('tool_output_frame_id', 'left_tool0_target'),
+            ('output_topic_name', '/left_cartesian_controller/target_frame'),
+        ],
+    )
+
+    right_tracker_launch = IncludeLaunchDescription(
+        PathJoinSubstitution([
+            FindPackageShare('libsurvive_arm_control'),
+            'launch',
+            'libsurvive_arm_control.launch.py',
+        ]),
+        condition=IfCondition(LaunchConfiguration('use_trackers')),
+        launch_arguments=[
+            ('tracker_frame_id', 'LHR-B618CEC9'),
+            ('tool_frame_id', 'right_tool0'),
+            ('base_frame_id', 'right_base_link'),
+            ('tool_output_frame_id', 'right_tool0_target'),
+            ('output_topic_name', '/right_cartesian_controller/target_frame'),
+        ],
+    )
+
     return LaunchDescription([
         mode_arg,
         use_sim_time_arg,
         left_robot_ip_arg,
         right_robot_ip_arg,
+        left_mia_port_arg,
+        right_mia_port_arg,
+        use_trackers_arg,
         base_poses_file_arg,
         proportional_gain_arg,
         feedforward_gain_arg,
@@ -197,6 +240,9 @@ def generate_launch_description():
         OpaqueFunction(function=launch_ros2_control),
         joint_state_broadcaster_spawner,
         bimanual_controller_spawner,
+        stopped_controller_spawner,
         left_joint_state_to_traj_node,
         right_joint_state_to_traj_node,
+        left_tracker_launch,
+        right_tracker_launch,
     ])
