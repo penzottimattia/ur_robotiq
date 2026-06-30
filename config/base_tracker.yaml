@@ -1,0 +1,13 @@
+base_tracker_coordinates:
+ position:
+  x: 0.10536
+  y: -0.07536
+  z: 0.0
+ rotation:
+  w: 0.0
+  z: 0.0
+  y: 0.3826834
+  x: 0.9238795
+ frames:
+  parent: LHR-4AFA225D
+  child: world

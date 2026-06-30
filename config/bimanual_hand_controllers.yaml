@@ -23,6 +23,12 @@ controller_manager:
     right_gripper_controller:
       type: joint_trajectory_controller/JointTrajectoryController
 
+    left_hand_controller:
+      type: position_controllers/JointGroupPositionController
+
+    right_hand_controller:
+      type: position_controllers/JointGroupPositionController
+
     left_cartesian_controller:
       type: cartesian_motion_controller/CartesianMotionController
     
@@ -136,6 +142,20 @@ right_state_broadcaster:
     interfaces:
       - position
       - velocity
+
+left_hand_controller:
+  ros__parameters:
+    joints:
+      - left_hand_j_index_fle
+      - left_hand_j_thumb_fle
+      - left_hand_j_mrl_fle
+
+right_hand_controller:
+  ros__parameters:
+    joints:
+      - right_hand_j_index_fle
+      - right_hand_j_thumb_fle
+      - right_hand_j_mrl_fle
 
 left_cartesian_controller:
   ros__parameters:

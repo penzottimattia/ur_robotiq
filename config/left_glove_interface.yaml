@@ -1,0 +1,5 @@
+left_senseglove_interface:
+  ros__parameters:
+    serial: "00927"
+    side: "l"
+    output_topic: "/left_hand_controller/commands"

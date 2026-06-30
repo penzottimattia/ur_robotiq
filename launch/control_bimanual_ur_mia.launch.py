@@ -62,6 +62,30 @@ def generate_launch_description():
         description='Controllers YAML for controller_manager',
     )
 
+    use_gloves_arg = DeclareLaunchArgument(
+        'use_gloves',
+        default_value='false',
+        description='Launch SenseGlove interface nodes for bimanual control',
+    )
+    left_glove_config_file_arg = DeclareLaunchArgument(
+        'left_glove_config_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_robotiq'),
+            'config',
+            'left_glove_interface.yaml',
+        ]),
+        description='Configuration YAML for left SenseGlove',
+    )
+    right_glove_config_file_arg = DeclareLaunchArgument(
+        'right_glove_config_file',
+        default_value=PathJoinSubstitution([
+            FindPackageShare('ur_robotiq'),
+            'config',
+            'right_glove_interface.yaml',
+        ]),
+        description='Configuration YAML for right SenseGlove',
+    )
+
     # Add calibration file launch arguments so calibration YAMLs are passed through to the URDF xacro
     left_calib_file_arg = DeclareLaunchArgument(
         'left_calib_file',
@@ -203,6 +227,12 @@ def generate_launch_description():
             ('base_frame_id', 'left_base_link'),
             ('tool_output_frame_id', 'left_tool0_target'),
             ('output_topic_name', '/left_cartesian_controller/target_frame'),
+            ('publish_static_tf', 'false')
+            ('config_file', PathJoinSubstitution([
+                FindPackageShare('ur_robotiq'),
+                'config',
+                'base_tracker.yaml',
+            ])),
         ],
     )
 
@@ -219,8 +249,27 @@ def generate_launch_description():
             ('base_frame_id', 'right_base_link'),
             ('tool_output_frame_id', 'right_tool0_target'),
             ('output_topic_name', '/right_cartesian_controller/target_frame'),
+            ('publish_static_tf', 'false'),
         ],
     )
+
+    left_glove_node = Node(
+            package="senseglove_interface",
+            executable="senseglove_interface_node",
+            name="left_senseglove_interface",
+            output="screen",
+            parameters=[LaunchConfiguration('left_glove_config_file')],
+            condition=IfCondition(LaunchConfiguration('use_gloves'))
+        )
+    
+    right_glove_node = Node(
+            package="senseglove_interface",
+            executable="senseglove_interface_node",
+            name="right_senseglove_interface",
+            output="screen",
+            parameters=[LaunchConfiguration('right_glove_config_file')],
+            condition=IfCondition(LaunchConfiguration('use_gloves'))
+        )
 
     return LaunchDescription([
         mode_arg,
@@ -230,6 +279,9 @@ def generate_launch_description():
         left_mia_port_arg,
         right_mia_port_arg,
         use_trackers_arg,
+        use_gloves_arg,
+        left_glove_config_file_arg,
+        right_glove_config_file_arg,
         base_poses_file_arg,
         proportional_gain_arg,
         feedforward_gain_arg,
@@ -245,4 +297,6 @@ def generate_launch_description():
         right_joint_state_to_traj_node,
         left_tracker_launch,
         right_tracker_launch,
+        left_glove_node,
+        right_glove_node,
     ])
