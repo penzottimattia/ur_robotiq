@@ -175,14 +175,14 @@ def generate_launch_description():
     bimanual_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager'],
+        arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager', '--inactive'],
         output='screen',
     )
 
     stopped_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['left_cartesian_controller', 'right_cartesian_controller', '--controller-manager', '/controller_manager', '--inactive'],
+        arguments=['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller', '--controller-manager', '/controller_manager'],
         output='screen',
     )
 
@@ -222,12 +222,13 @@ def generate_launch_description():
         ]),
         condition=IfCondition(LaunchConfiguration('use_trackers')),
         launch_arguments=[
-            ('tracker_frame_id', 'LHR-428A547D'),
-            ('tool_frame_id', 'left_tool0'),
+            ('prefix', 'left_'),
+            ('tracker_frame_id', 'LHR-B618CEC9'),
+            ('tool_frame_id', 'left_dorsum_link'),
             ('base_frame_id', 'left_base_link'),
-            ('tool_output_frame_id', 'left_tool0_target'),
+            ('tool_output_frame_id', 'left_dorsum_target'),
             ('output_topic_name', '/left_cartesian_controller/target_frame'),
-            ('publish_static_tf', 'false')
+            ('publish_static_tf', 'true'),
             ('config_file', PathJoinSubstitution([
                 FindPackageShare('ur_robotiq'),
                 'config',
@@ -244,10 +245,11 @@ def generate_launch_description():
         ]),
         condition=IfCondition(LaunchConfiguration('use_trackers')),
         launch_arguments=[
-            ('tracker_frame_id', 'LHR-B618CEC9'),
-            ('tool_frame_id', 'right_tool0'),
+            ('prefix', 'right_'),
+            ('tracker_frame_id', 'LHR-428A547D'),
+            ('tool_frame_id', 'right_dorsum_link'),
             ('base_frame_id', 'right_base_link'),
-            ('tool_output_frame_id', 'right_tool0_target'),
+            ('tool_output_frame_id', 'right_dorsum_target'),
             ('output_topic_name', '/right_cartesian_controller/target_frame'),
             ('publish_static_tf', 'false'),
         ],

@@ -146,20 +146,20 @@ right_state_broadcaster:
 left_hand_controller:
   ros__parameters:
     joints:
-      - left_hand_j_index_fle
       - left_hand_j_thumb_fle
+      - left_hand_j_index_fle
       - left_hand_j_mrl_fle
 
 right_hand_controller:
   ros__parameters:
     joints:
-      - right_hand_j_index_fle
       - right_hand_j_thumb_fle
+      - right_hand_j_index_fle
       - right_hand_j_mrl_fle
 
 left_cartesian_controller:
   ros__parameters:
-    end_effector_link: left_tool0
+    end_effector_link: left_dorsum_link
     robot_base_link: left_base_link
     joints:
       - left_shoulder_pan_joint
@@ -175,16 +175,16 @@ left_cartesian_controller:
         iterations: 10
         publish_state_feedback: True
     pd_gains:
-        trans_x: {p: 1.0}
-        trans_y: {p: 1.0}
-        trans_z: {p: 1.0}
-        rot_x: {p: 0.5}
-        rot_y: {p: 0.5}
-        rot_z: {p: 0.5}
+        trans_x: {p: 10.0}
+        trans_y: {p: 10.0}
+        trans_z: {p: 10.0}
+        rot_x: {p: 2.0}
+        rot_y: {p: 2.0}
+        rot_z: {p: 2.0}
 
 right_cartesian_controller:
   ros__parameters:
-    end_effector_link: right_tool0
+    end_effector_link: right_dorsum_link
     robot_base_link: right_base_link
     joints:
       - right_shoulder_pan_joint
@@ -200,9 +200,9 @@ right_cartesian_controller:
         iterations: 10
         publish_state_feedback: True
     pd_gains:
-        trans_x: {p: 1.0}
-        trans_y: {p: 1.0}
-        trans_z: {p: 1.0}
-        rot_x: {p: 0.5}
-        rot_y: {p: 0.5}
-        rot_z: {p: 0.5}
+        trans_x: {p: 10.0}
+        trans_y: {p: 10.0}
+        trans_z: {p: 10.0}
+        rot_x: {p: 2.0}
+        rot_y: {p: 2.0}
+        rot_z: {p: 2.0}
