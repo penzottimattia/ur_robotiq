@@ -6,7 +6,7 @@ left:
   elbow_joint: -2.04204
   wrist_1_joint: 3.83972
   wrist_2_joint: -1.8326
-  wrist_3_joint: 0
+  wrist_3_joint: 1.57
   # gripper_joint: 0.4
 
 right:
@@ -15,5 +15,5 @@ right:
   elbow_joint: 2.04204
   wrist_1_joint: -0.698132
   wrist_2_joint: 1.8326
-  wrist_3_joint: 0
+  wrist_3_joint: -1.57
   # gripper_joint: 0.4
