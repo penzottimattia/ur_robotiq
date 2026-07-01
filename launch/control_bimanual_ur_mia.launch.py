@@ -86,6 +86,12 @@ def generate_launch_description():
         description='Configuration YAML for right SenseGlove',
     )
 
+    use_cartesian_stitcher_arg = DeclareLaunchArgument(
+        'use_cartesian_stitcher',
+        default_value='false',
+        description='Launch command stitcher node for bimanual control',
+    )
+
     # Add calibration file launch arguments so calibration YAMLs are passed through to the URDF xacro
     left_calib_file_arg = DeclareLaunchArgument(
         'left_calib_file',
@@ -175,8 +181,9 @@ def generate_launch_description():
     bimanual_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager', '--inactive'],
+        arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager'],
         output='screen',
+        condition=IfCondition(LaunchConfiguration('use_cartesian_stitcher'))
     )
 
     stopped_controller_spawner = Node(
@@ -184,6 +191,7 @@ def generate_launch_description():
         executable='spawner',
         arguments=['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller', '--controller-manager', '/controller_manager'],
         output='screen',
+        condition=UnlessCondition(LaunchConfiguration('use_cartesian_stitcher'))
     )
 
     left_joint_state_to_traj_node = Node(
@@ -191,6 +199,7 @@ def generate_launch_description():
         executable='joint_state_to_trajectory_node',
         name='left_joint_state_to_trajectory_node',
         output='screen',
+        condition=IfCondition(LaunchConfiguration('use_cartesian_stitcher')),
         parameters=[{
             'tf_prefix': 'left_',
             'joint_state_topic': '/left_arm_controller/commands',
@@ -205,12 +214,29 @@ def generate_launch_description():
         executable='joint_state_to_trajectory_node',
         name='right_joint_state_to_trajectory_node',
         output='screen',
+        condition=IfCondition(LaunchConfiguration('use_cartesian_stitcher')),
         parameters=[{
             'tf_prefix': 'right_',
             'joint_state_topic': '/right_arm_controller/commands',
             'trajectory_topic': '/right_arm_controller/joint_trajectory',
             'gripper_topic': '/right_gripper_controller/joint_trajectory',
             'gripper_joint_list': ['right_hand_j_index_fle', 'right_hand_j_thumb_fle', 'right_hand_j_mrl_fle'],
+        }],
+    )
+
+    cartesian_stitcher_node = Node(
+        package='ur_robotiq',
+        executable='cartesian_stitcher_node',
+        name='cartesian_stitcher_node',
+        output='screen',
+        condition=IfCondition(LaunchConfiguration('use_cartesian_stitcher')),
+        parameters=[{
+            'left_frame_topic': '/left_cartesian_controller/target_frame',
+            'right_frame_topic': '/right_cartesian_controller/target_frame',
+            'left_gripper_topic': '/left_hand_controller/target_state',
+            'right_gripper_topic': '/right_hand_controller/target_state',
+            'gripper_keys': ['index_flexion'],
+            'output_topic': '/commands',
         }],
     )
 
@@ -282,6 +308,7 @@ def generate_launch_description():
         right_mia_port_arg,
         use_trackers_arg,
         use_gloves_arg,
+        use_cartesian_stitcher_arg,
         left_glove_config_file_arg,
         right_glove_config_file_arg,
         base_poses_file_arg,
@@ -301,4 +328,5 @@ def generate_launch_description():
         right_tracker_launch,
         left_glove_node,
         right_glove_node,
+        cartesian_stitcher_node,
     ])
