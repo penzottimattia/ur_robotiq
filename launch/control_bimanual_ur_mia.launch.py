@@ -205,7 +205,7 @@ def generate_launch_description():
             'joint_state_topic': '/left_arm_controller/commands',
             'trajectory_topic': '/left_arm_controller/joint_trajectory',
             'gripper_topic': '/left_gripper_controller/joint_trajectory',
-            'gripper_joint_list': ['left_hand_j_index_fle', 'left_hand_j_thumb_fle', 'left_hand_j_mrl_fle'],
+            'gripper_joint_list': ['hand_j_index_fle', 'hand_j_thumb_fle', 'hand_j_mrl_fle'],
         }],
     )
 
@@ -220,7 +220,7 @@ def generate_launch_description():
             'joint_state_topic': '/right_arm_controller/commands',
             'trajectory_topic': '/right_arm_controller/joint_trajectory',
             'gripper_topic': '/right_gripper_controller/joint_trajectory',
-            'gripper_joint_list': ['right_hand_j_index_fle', 'right_hand_j_thumb_fle', 'right_hand_j_mrl_fle'],
+            'gripper_joint_list': ['hand_j_index_fle', 'hand_j_thumb_fle', 'hand_j_mrl_fle'],
         }],
     )
 
@@ -251,7 +251,7 @@ def generate_launch_description():
             ('prefix', 'left_'),
             ('tracker_frame_id', 'LHR-B618CEC9'),
             ('tool_frame_id', 'left_dorsum_link'),
-            ('base_frame_id', 'left_base_link'),
+            ('base_frame_id', 'world'),
             ('tool_output_frame_id', 'left_dorsum_target'),
             ('output_topic_name', '/left_cartesian_controller/target_frame'),
             ('publish_static_tf', 'true'),
@@ -274,7 +274,7 @@ def generate_launch_description():
             ('prefix', 'right_'),
             ('tracker_frame_id', 'LHR-428A547D'),
             ('tool_frame_id', 'right_dorsum_link'),
-            ('base_frame_id', 'right_base_link'),
+            ('base_frame_id', 'world'),
             ('tool_output_frame_id', 'right_dorsum_target'),
             ('output_topic_name', '/right_cartesian_controller/target_frame'),
             ('publish_static_tf', 'false'),

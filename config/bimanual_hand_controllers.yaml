@@ -160,7 +160,7 @@ right_hand_controller:
 left_cartesian_controller:
   ros__parameters:
     end_effector_link: left_dorsum_link
-    robot_base_link: left_base_link
+    robot_base_link: world
     joints:
       - left_shoulder_pan_joint
       - left_shoulder_lift_joint
@@ -185,7 +185,7 @@ left_cartesian_controller:
 right_cartesian_controller:
   ros__parameters:
     end_effector_link: right_dorsum_link
-    robot_base_link: right_base_link
+    robot_base_link: world
     joints:
       - right_shoulder_pan_joint
       - right_shoulder_lift_joint
