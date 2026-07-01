@@ -3,3 +3,4 @@ right_senseglove_interface:
     serial: "00932"
     side: "r"
     output_topic: "/right_hand_controller/commands"
+    state_topic: "/right_hand_controller/target_state"
