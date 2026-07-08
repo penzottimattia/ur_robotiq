@@ -42,7 +42,8 @@ setup(
             'usb_camera_node = ur_robotiq.usb_camera_node:main',
             'gello_offset_node = ur_robotiq.gello_offset_node:main',
             'gello_publisher = ur_robotiq.gello_publisher:main',
-            'cartesian_stitcher_node = ur_robotiq.cartesian_stitcher_node:main'
+            'cartesian_stitcher_node = ur_robotiq.cartesian_stitcher_node:main',
+            'vive_joy_node = ur_robotiq.vive_joy_node:main',
         ],
     },
 )

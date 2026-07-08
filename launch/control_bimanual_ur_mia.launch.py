@@ -298,6 +298,57 @@ def generate_launch_description():
             parameters=[LaunchConfiguration('right_glove_config_file')],
             condition=IfCondition(LaunchConfiguration('use_gloves'))
         )
+    
+    vive_hand_node = Node(
+            package="ur_robotiq",
+            executable="vive_joy_node",
+            name="vive_joy_node",
+            output="screen",
+            parameters=[{
+                'input_topic': '/libsurvive/joy',
+                'left_command_topic': '/left_hand_controller/commands',
+                'right_command_topic': '/right_hand_controller/commands',
+                'left_tracker_id': 'LHR-B618CEC9',
+                'right_tracker_id': 'LHR-428A547D',
+                'gripper_keys': ['index', 'thumb', 'middle'], # just a placeholder to determin array size, keys are not used in the node cause message type is Float64MultiArray
+                'topic_type': 'std_msgs/Float64MultiArray'
+            }],
+            condition=IfCondition(PythonExpression([
+                "'",
+                LaunchConfiguration('use_trackers'),
+                "' == 'true' and '",
+                LaunchConfiguration('use_gloves'),
+                "' != 'true' and '",
+                LaunchConfiguration('use_cartesian_stitcher'),
+                "' != 'true'",
+            ]))
+        )
+    
+    vive_gripper_node = Node(
+            package="ur_robotiq",
+            executable="vive_joy_node",
+            name="vive_gripper_node",
+            output="screen",
+            parameters=[{
+                'input_topic': '/libsurvive/joy',
+                'left_command_topic': '/left_hand_controller/target_state',
+                'right_command_topic': '/right_hand_controller/target_state',
+                'left_tracker_id': 'LHR-B618CEC9',
+                'right_tracker_id': 'LHR-428A547D',
+                'gripper_keys': ['index_flexion'], # must match the keys used in the cartesian stitcher node, which are used to extract the gripper state from the Vive controller message
+                'topic_type': 'sensor_msgs/JointState'
+            }],
+            condition=IfCondition(PythonExpression([
+                "'",
+                LaunchConfiguration('use_trackers'),
+                "' == 'true' and '",
+                LaunchConfiguration('use_gloves'),
+                "' != 'true' and '",
+                LaunchConfiguration('use_cartesian_stitcher'),
+                "' == 'true'",
+            ]))
+        )
+
 
     return LaunchDescription([
         mode_arg,
@@ -329,4 +380,6 @@ def generate_launch_description():
         left_glove_node,
         right_glove_node,
         cartesian_stitcher_node,
+        vive_hand_node,
+        vive_gripper_node,
     ])
