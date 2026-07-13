@@ -101,7 +101,7 @@
 			<joint name="${tf_prefix}probe_joint" type="fixed">
 				<parent link="${tf_prefix}tool0"/>
 				<child link="${tf_prefix}probe_link"/>
-				<origin xyz="-0.02 -0.07 0.022" rpy="0 0 ${math.pi/2}"/>
+				<origin xyz="0.02 0.07 0.022" rpy="0 0 -${math.pi/2}"/>
 			</joint>
 		</xacro:if>
 
