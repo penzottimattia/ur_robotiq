@@ -66,37 +66,42 @@
 			<origin xyz="${base_xyz}" rpy="${base_rpy}"/>
 		</xacro:ur_robot>
 
-		<xacro:mia_hand
-			laterality="${laterality}"
-			joint_limits_config_file="${joint_limits_config_file}"
-			parent="${tf_prefix}tool0"
-			prefix="${tf_prefix}hand_">
-			<xacro:if value="${laterality == 'right'}">
-				<origin xyz="0.000111314 0.000000002 0.022566028" rpy="1.570796327 0.000000076 1.570796251"/>
-			</xacro:if>
-			<xacro:if value="${laterality == 'left'}">
-				<origin xyz="0.000111314 0.000000002 0.022566028" rpy="-1.570796327 0.000000076 1.570796251"/>
-			</xacro:if>
-		</xacro:mia_hand>
+		<xacro:unless value="${use_calib_probe}">
+			<xacro:mia_hand
+				laterality="${laterality}"
+				joint_limits_config_file="${joint_limits_config_file}"
+				parent="${tf_prefix}tool0"
+				prefix="${tf_prefix}hand_">
+				<xacro:if value="${laterality == 'right'}">
+					<origin xyz="0.000111314 0.000000002 0.022566028" rpy="1.570796327 0.000000076 1.570796251"/>
+				</xacro:if>
+				<xacro:if value="${laterality == 'left'}">
+					<origin xyz="0.000111314 0.000000002 0.022566028" rpy="-1.570796327 0.000000076 1.570796251"/>
+				</xacro:if>
+			</xacro:mia_hand>
 
-		<xacro:mia_hand_ros2_control
-			name="${hand_name}"
-			prefix="${tf_prefix}hand_"
-			serial_port="${hand_serial_port}"
-			use_mock_hardware="${hand_use_mock_hardware}"/>
+			<xacro:mia_hand_ros2_control
+				name="${hand_name}"
+				prefix="${tf_prefix}hand_"
+				serial_port="${hand_serial_port}"
+				use_mock_hardware="${hand_use_mock_hardware}"/>
+		</xacro:unless>
 
 		<xacro:if value="${use_calib_probe}">
 			<link name="${tf_prefix}probe_link">
 				<visual>
 					<geometry>
-						<mesh filename="package://ur_robotiq/meshes/triangle.obj"/>
+						<mesh filename="package://ur_robotiq/meshes/black_triangle.stl"/>
 					</geometry>
+					<material name="black">
+						<color rgba="0 0 0 1"/>
+					</material>
 				</visual>
 			</link>
 			<joint name="${tf_prefix}probe_joint" type="fixed">
 				<parent link="${tf_prefix}tool0"/>
 				<child link="${tf_prefix}probe_link"/>
-				<origin xyz="0 0 0.15" rpy="1.57 0 0"/>
+				<origin xyz="-0.02 -0.07 0.022" rpy="0 0 ${math.pi/2}"/>
 			</joint>
 		</xacro:if>
 
