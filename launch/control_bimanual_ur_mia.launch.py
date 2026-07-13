@@ -171,19 +171,31 @@ def generate_launch_description():
         parameters=[robot_description, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
     )
 
-    joint_state_broadcaster_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=['joint_state_broadcaster', 'left_state_broadcaster', 'right_state_broadcaster', '--controller-manager', '/controller_manager'],
-        output='screen',
-    )
+    def launch_state_broadcasters(context):
+        mode = LaunchConfiguration('mode').perform(context)
+        if mode == 'calib':
+            arguments = ['joint_state_broadcaster', '--controller-manager', '/controller_manager']
+        else:
+            arguments = ['joint_state_broadcaster', 'left_state_broadcaster', 'right_state_broadcaster', '--controller-manager', '/controller_manager']
+        
+        return [Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=arguments,
+            output='screen',
+        )]
+
+    joint_state_broadcaster_spawner = OpaqueFunction(function=launch_state_broadcasters)
 
     bimanual_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
         arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager'],
         output='screen',
-        condition=IfCondition(LaunchConfiguration('use_cartesian_stitcher'))
+        condition=IfCondition(PythonExpression([
+            "'", LaunchConfiguration('use_cartesian_stitcher'), "' == 'true' and '",
+            LaunchConfiguration('mode'), "' != 'calib'"
+        ]))
     )
 
     stopped_controller_spawner = Node(
@@ -191,7 +203,10 @@ def generate_launch_description():
         executable='spawner',
         arguments=['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller', '--controller-manager', '/controller_manager'],
         output='screen',
-        condition=UnlessCondition(LaunchConfiguration('use_cartesian_stitcher'))
+        condition=IfCondition(PythonExpression([
+            "'", LaunchConfiguration('use_cartesian_stitcher'), "' != 'true' and '",
+            LaunchConfiguration('mode'), "' != 'calib'"
+        ]))
     )
 
     left_joint_state_to_traj_node = Node(
