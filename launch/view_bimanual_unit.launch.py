@@ -85,7 +85,7 @@ def _launch_setup(context, *args, **kwargs):
             output='screen',
             parameters=[robot_description, {'use_sim_time': use_sim_time}],
             remappings=[('joint_states', 'remapped_joint_states')]
-            if setup == 'ur_mia'
+            if setup == 'ur_mia' and mode != 'calib'
             else [],
         ),
         Node(
@@ -104,7 +104,7 @@ def _launch_setup(context, *args, **kwargs):
         ),
     ]
 
-    if setup == 'ur_mia':
+    if setup == 'ur_mia' and mode != 'calib':
         nodes.extend([
             Node(
                 package='mia_hand_description',
