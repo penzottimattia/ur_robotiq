@@ -4,7 +4,7 @@
 
 	<xacro:arg name="use_mock_hardware" default="true"/>
 	<xacro:arg name="mock_sensor_commands" default="false"/>
-	<xacro:arg name="use_mock_hands" default="true"/>
+	<xacro:arg name="use_mock_grippers" default="true"/>
 	<xacro:arg name="use_calib_probe" default="false"/>
 
 	<xacro:arg name="left_calib_file" default="$(find ur_description)/config/ur5/default_kinematics.yaml"/>
@@ -66,7 +66,7 @@
 		script_command_port="$(arg left_script_command_port)"
 		hand_name="left_mia_hand"
 		hand_serial_port="$(arg left_hand_serial_port)"
-		hand_use_mock_hardware="$(arg use_mock_hands)"
+		hand_use_mock_hardware="$(arg use_mock_grippers)"
 		use_calib_probe="$(arg use_calib_probe)"
 		joint_limits_config_file="$(arg left_hand_joint_limits_file)"
 		transmission_config_file="$(arg left_hand_transmission_file)"
@@ -94,7 +94,7 @@
 		script_command_port="$(arg right_script_command_port)"
 		hand_name="right_mia_hand"
 		hand_serial_port="$(arg right_hand_serial_port)"
-		hand_use_mock_hardware="$(arg use_mock_hands)"
+		hand_use_mock_hardware="$(arg use_mock_grippers)"
 		use_calib_probe="$(arg use_calib_probe)"
 		joint_limits_config_file="$(arg right_hand_joint_limits_file)"
 		transmission_config_file="$(arg right_hand_transmission_file)"
