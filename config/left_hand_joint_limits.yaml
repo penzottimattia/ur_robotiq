@@ -1,0 +1,14 @@
+# MNS22
+joint_limits:
+  j_index_fle:
+    min_position: -1.03
+    max_position: 1.1
+  j_mrl_fle:
+    min_position: -0.13
+    max_position: 1.14
+  j_thumb_fle:
+    min_position: -0.18
+    max_position: 1.24
+  j_thumb_opp: # manually configured, figure out how to get this from the hand
+    min_position: -0.628
+    max_position: 0.12
