@@ -27,7 +27,8 @@
 		tool_device_name:='/tmp/ttyUR' tool_tcp_port:='54321'
 		hand_name:='mia_hand' hand_serial_port:='/dev/ttyUSB0'
 		hand_use_mock_hardware:='true'
-		joint_limits_config_file:='joint_limits_default.yaml'
+		joint_limits_config_file:='$(find mia_hand_description)/config/joint_limits_default.yaml'
+		transmission_config_file:='$(find mia_hand_description)/config/transmission_config_default.yaml'
 		use_calib_probe:='false'
 	">
 		<xacro:ur_robot
@@ -70,6 +71,7 @@
 			<xacro:mia_hand
 				laterality="${laterality}"
 				joint_limits_config_file="${joint_limits_config_file}"
+				transmission_config_file="${transmission_config_file}"
 				parent="${tf_prefix}tool0"
 				prefix="${tf_prefix}hand_">
 				<xacro:if value="${laterality == 'right'}">
@@ -84,6 +86,8 @@
 				name="${hand_name}"
 				prefix="${tf_prefix}hand_"
 				serial_port="${hand_serial_port}"
+				joint_limits_config_file="${joint_limits_config_file}"
+				transmission_config_file="${transmission_config_file}"
 				use_mock_hardware="${hand_use_mock_hardware}"/>
 		</xacro:unless>
 

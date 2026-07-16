@@ -37,6 +37,11 @@
 	<xacro:property name="right_base_xyz" value="${base_poses['right_base_xyz']}"/>
 	<xacro:property name="right_base_rpy" value="${base_poses['right_base_rpy']}"/>
 
+	<xacro:arg name="left_hand_joint_limits_file" default="$(find ur_robotiq)/config/left_hand_joint_limits.yaml"/>
+	<xacro:arg name="right_hand_joint_limits_file" default="$(find ur_robotiq)/config/right_hand_joint_limits.yaml"/>
+	<xacro:arg name="left_hand_transmission_file" default="$(find ur_robotiq)/config/left_hand_transmission.yaml"/>
+	<xacro:arg name="right_hand_transmission_file" default="$(find ur_robotiq)/config/right_hand_transmission.yaml"/>
+
 	<link name="world"/>
 
 	<xacro:ur_mia_unit
@@ -62,7 +67,10 @@
 		hand_name="left_mia_hand"
 		hand_serial_port="$(arg left_hand_serial_port)"
 		hand_use_mock_hardware="$(arg use_mock_hands)"
-		use_calib_probe="$(arg use_calib_probe)"/>
+		use_calib_probe="$(arg use_calib_probe)"
+		joint_limits_config_file="$(arg left_hand_joint_limits_file)"
+		transmission_config_file="$(arg left_hand_transmission_file)"
+		/>
 
 	<xacro:ur_mia_unit
 		arm_name="right_ur5"
@@ -87,6 +95,9 @@
 		hand_name="right_mia_hand"
 		hand_serial_port="$(arg right_hand_serial_port)"
 		hand_use_mock_hardware="$(arg use_mock_hands)"
-		use_calib_probe="$(arg use_calib_probe)"/>
+		use_calib_probe="$(arg use_calib_probe)"
+		joint_limits_config_file="$(arg right_hand_joint_limits_file)"
+		transmission_config_file="$(arg right_hand_transmission_file)"
+		/>
 
 </robot>
