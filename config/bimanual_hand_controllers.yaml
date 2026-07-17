@@ -48,6 +48,7 @@ left_gripper_controller:
       - velocity
     constraints:
       goal_time: 0.0
+    open_loop_control: true
 
 right_gripper_controller:
   ros__parameters:
@@ -62,6 +63,7 @@ right_gripper_controller:
       - velocity
     constraints:
       goal_time: 0.0
+    open_loop_control: true
       
 left_arm_controller:
   ros__parameters:
