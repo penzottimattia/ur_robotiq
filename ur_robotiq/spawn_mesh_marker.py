@@ -21,6 +21,7 @@ class MeshMarkerNode(Node):
         super().__init__('spawn_mesh_marker')
 
         # Declare parameters for ros2 run --ros-args -p <name>:=<value>
+        self.declare_parameter('name', '')
         self.declare_parameter('mesh', '')
         self.declare_parameter('pose_topic', '/mesh_pose')
         self.declare_parameter('frame', '')
@@ -30,6 +31,7 @@ class MeshMarkerNode(Node):
         pose_topic = self.get_parameter('pose_topic').get_parameter_value().string_value
         frame_override = self.get_parameter('frame').get_parameter_value().string_value
         scale = float(self.get_parameter('scale').get_parameter_value().double_value)
+        self.name = self.get_parameter('name').get_parameter_value().string_value
 
         if not mesh_path:
             self.get_logger().error('Parameter "mesh" is required and must be an absolute path to the mesh file')
@@ -49,7 +51,7 @@ class MeshMarkerNode(Node):
         self.latest_pose: Optional[PoseStamped] = None
         self._logged_missing = False
         
-        pub_name = f'mesh_marker_{os.path.basename(mesh_path)}'.removesuffix('.obj')
+        pub_name = f'mesh_marker_{self.name}' if self.name else f'mesh_marker_{os.path.basename(mesh_path)}'.removesuffix('.obj')
 
         self.pub = self.create_publisher(Marker, f'{pub_name}', 10)
         self.sub = self.create_subscription(PoseStamped, pose_topic, self._pose_cb, 10)
@@ -83,7 +85,7 @@ class MeshMarkerNode(Node):
 
         # randomize color a bit for better visibility if multiple markers are present
         import random
-        rng = random.Random(self.mesh_resource)  # deterministic color per frame
+        rng = random.Random(self.name)  # deterministic color per frame
         m.color.r = rng.uniform(0.2, 1.0)
         m.color.g = rng.uniform(0.2, 1.0)
         m.color.b = rng.uniform(0.2, 1.0)
