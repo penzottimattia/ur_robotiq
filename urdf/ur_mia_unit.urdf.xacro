@@ -11,6 +11,9 @@
 	<xacro:property name="default_initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
 	<xacro:property name="default_initial_positions" value="${xacro.load_yaml(default_initial_positions_file)['left']}"/>
 
+	<xacro:arg name="joint_limits_config_file" default="$(find mia_hand_description)/calibration/joint_limits_default.yaml"/>
+	<xacro:arg name="transmission_config_file" default="$(find mia_hand_description)/calibration/transmission_config_default.yaml"/>
+
 	<xacro:macro name="ur_mia_unit" params="
 		arm_name:='ur5' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
 		laterality:='right'
@@ -27,8 +30,8 @@
 		tool_device_name:='/tmp/ttyUR' tool_tcp_port:='54321'
 		hand_name:='mia_hand' hand_serial_port:='/dev/ttyUSB0'
 		hand_use_mock_hardware:='true'
-		joint_limits_config_file:='$(find mia_hand_description)/config/joint_limits_default.yaml'
-		transmission_config_file:='$(find mia_hand_description)/config/transmission_config_default.yaml'
+		joint_limits_config_file:='$(find mia_hand_description)/calibration/joint_limits_default.yaml'
+		transmission_config_file:='$(find mia_hand_description)/calibration/transmission_config_default.yaml'
 		use_calib_probe:='false'
 	">
 		<xacro:ur_robot
@@ -131,13 +134,17 @@
 			<xacro:ur_mia_unit
 				laterality="$(arg laterality)"
 				initial_positions="${instantiate_initial_positions_all['right']}"
-				kinematics_parameters_file="$(arg kinematics_parameters_file)"/>
+				kinematics_parameters_file="$(arg kinematics_parameters_file)"
+				joint_limits_config_file="$(arg joint_limits_config_file)"
+				transmission_config_file="$(arg transmission_config_file)"/>
 		</xacro:if>
 		<xacro:if value="${'left' == '$(arg laterality)'}">
 			<xacro:ur_mia_unit
 				laterality="$(arg laterality)"
 				initial_positions="${instantiate_initial_positions_all['left']}"
-				kinematics_parameters_file="$(arg kinematics_parameters_file)"/>
+				kinematics_parameters_file="$(arg kinematics_parameters_file)"
+				joint_limits_config_file="$(arg joint_limits_config_file)"
+				transmission_config_file="$(arg transmission_config_file)"/>
 		</xacro:if>
 	</xacro:if>
 </robot>
