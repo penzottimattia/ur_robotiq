@@ -10,26 +10,40 @@ static_camera_tf:
   enabled: true
 
 objects:
-  - name: flask
-    mesh: /ws/src/ur_robotiq/object/flask/flask.obj
-    pose_topic: /object_pose/flask
+  - name: vial
+    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
+    pose_topic: /object_pose/vial_tube
     frame: camera_color_optical_frame
     scale: 1.0
 
-  - name: cap_
-    mesh: /ws/src/ur_robotiq/object/cap_/cap_.obj
-    pose_topic: /object_pose/cap_
+  - name: cap
+    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
+    pose_topic: /object_pose/cap
     frame: camera_color_optical_frame
+    scale: 1.0
+
+  - name: vial_avg
+    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
+    pose_topic: /object_detection/vial_tube
+    frame: world
+    scale: 1.0
+
+  - name: cap_avg
+    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
+    pose_topic: /object_detection/cap
+    frame: world
     scale: 1.0
 
 transforms:
-  - input_topic: /object_pose/flask
-    output_topic: /object_detection/flask
+  - input_topic: /object_pose/vial_tube
+    output_topic: /object_detection/vial_tube
     target_frame: world
+    average_count: 50
 
-  - input_topic: /object_pose/cap_
-    output_topic: /object_detection/cap_
+  - input_topic: /object_pose/cap
+    output_topic: /object_detection/cap
     target_frame: world
+    average_count: 50
 
 # Camera nodes to launch (USB cameras). Each entry will start a
 # `usb_camera_node` from this package with the provided parameters.

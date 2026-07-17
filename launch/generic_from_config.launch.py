@@ -50,6 +50,7 @@ def _launch_from_config(context, *args, **kwargs):
         scale = obj.get('scale', 1.0)
 
         params = [{
+            'name': obj.get('name', os.path.basename(mesh)),
             'mesh': mesh,
             'pose_topic': pose_topic,
             'frame': frame,
@@ -115,6 +116,7 @@ def _launch_from_config(context, *args, **kwargs):
             'input_topic': t.get('input_topic', '/mesh_pose'),
             'output_topic': t.get('output_topic', '/object_pose_world'),
             'target_frame': t.get('target_frame', 'world'),
+            'average_count': int(t.get('average_count', 1)),
         }]
         nodes.append(Node(
             package='ur_robotiq',
