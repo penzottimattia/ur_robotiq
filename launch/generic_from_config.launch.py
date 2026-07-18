@@ -77,6 +77,7 @@ def _launch_from_config(context, *args, **kwargs):
             'rot_jitter_std': float(m.get('rot_jitter_std', 0.01)),
             'offset_xyz': m.get('offset_xyz', [0.0, 0.0, 0.0]),
             'offset_rpy': m.get('offset_rpy', [0.0, 0.0, 0.0]),
+            'offset_quat': m.get('offset_quat', [0.0, 0.0, 0.0, 0.0]),
         }]
 
         nodes.append(Node(

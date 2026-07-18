@@ -91,6 +91,7 @@
 				serial_port="${hand_serial_port}"
 				joint_limits_config_file="${joint_limits_config_file}"
 				transmission_config_file="${transmission_config_file}"
+				initial_positions="${initial_positions}"
 				use_mock_hardware="${hand_use_mock_hardware}"/>
 		</xacro:unless>
 

@@ -169,10 +169,55 @@ def generate_launch_description():
         executable='robot_state_publisher',
         output='screen',
         parameters=[robot_description, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
+        remappings=[('joint_states', 'remapped_joint_states')],
+        condition=IfCondition(use_mock_grippers)
+    )
+
+    robot_state_publisher_without_remapper = Node(
+        package='robot_state_publisher',
+        executable='robot_state_publisher',
+        output='screen',
+        parameters=[robot_description, {'use_sim_time': LaunchConfiguration('use_sim_time')}],
+        condition=UnlessCondition(use_mock_grippers),
+    )
+
+    left_mia_joint_state_remapper = Node(
+        package='mia_hand_description',
+        executable='rviz2_joint_state_publisher_node',
+        name='left_mia_joint_state_remapper',
+        output='screen',
+        condition=IfCondition(use_mock_grippers),
+        parameters=[
+            robot_description,
+            PathJoinSubstitution([
+                FindPackageShare('ur_robotiq'),
+                'config',
+                'left_hand_transmission.yaml',
+            ]),
+            {'prefix': 'left_hand_'},
+        ],
+    )
+
+    right_mia_joint_state_remapper = Node(
+        package='mia_hand_description',
+        executable='rviz2_joint_state_publisher_node',
+        name='right_mia_joint_state_remapper',
+        output='screen',
+        condition=IfCondition(use_mock_grippers),
+        parameters=[
+            robot_description,
+            PathJoinSubstitution([
+                FindPackageShare('ur_robotiq'),
+                'config',
+                'right_hand_transmission.yaml',
+            ]),
+            {'prefix': 'right_hand_'},
+        ],
     )
 
     def launch_state_broadcasters(context):
         mode = LaunchConfiguration('mode').perform(context)
+        mock_grippers = mode in ('full_mock', 'mock_grippers_only')
         if mode == 'calib':
             arguments = ['joint_state_broadcaster', '--controller-manager', '/controller_manager']
         else:
@@ -183,6 +228,7 @@ def generate_launch_description():
             executable='spawner',
             arguments=arguments,
             output='screen',
+            remappings=[('joint_states', 'remapped_joint_states')] if mock_grippers else [],
         )]
 
     joint_state_broadcaster_spawner = OpaqueFunction(function=launch_state_broadcasters)
@@ -384,6 +430,9 @@ def generate_launch_description():
         left_calib_file_arg,
         right_calib_file_arg,
         robot_state_publisher,
+        robot_state_publisher_without_remapper,
+        left_mia_joint_state_remapper,
+        right_mia_joint_state_remapper,
         OpaqueFunction(function=launch_ros2_control),
         joint_state_broadcaster_spawner,
         bimanual_controller_spawner,

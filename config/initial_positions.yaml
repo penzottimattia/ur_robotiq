@@ -1,19 +1,39 @@
 # Default joint positions for mock hardware startup.
 
 left:
-  shoulder_pan_joint:   0.3808500
-  shoulder_lift_joint:  -1.866378
-  elbow_joint:          -1.772227
-  wrist_1_joint:        3.6457374
-  wrist_2_joint:        -1.239481
-  wrist_3_joint:        0.0
-  # gripper_joint: 0.4
+  
+  # shoulder_pan_joint:   0.3808500
+  # shoulder_lift_joint:  -1.866378
+  # elbow_joint:          -1.772227
+  # wrist_1_joint:        3.6457374
+  # wrist_2_joint:        -1.239481
+  # wrist_3_joint:        0.0
+  
+  shoulder_pan_joint: 0.45572
+  shoulder_lift_joint: -1.95869
+  elbow_joint: -2.20702
+  wrist_1_joint: -2.28526
+  wrist_2_joint: -0.39837
+  wrist_3_joint: -0.54522
+  j_index_fle: 0.80000
+  j_thumb_fle: 0.40000
+  j_mrl_fle: 0.80000
 
 right:
-  shoulder_pan_joint:   -0.583944
-  shoulder_lift_joint:  -1.300019
-  elbow_joint:          1.8046739
-  wrist_1_joint:        -0.437823
-  wrist_2_joint:        0.9512651
-  wrist_3_joint:        0.0
-  # gripper_joint: 0.4
+  
+  # shoulder_pan_joint:   -0.583944
+  # shoulder_lift_joint:  -1.300019
+  # elbow_joint:          1.8046739
+  # wrist_1_joint:        -0.437823
+  # wrist_2_joint:        0.9512651
+  # wrist_3_joint:        0.0
+
+  shoulder_pan_joint: -0.78030
+  shoulder_lift_joint: -1.18167
+  elbow_joint: 1.87270
+  wrist_1_joint: -0.60458
+  wrist_2_joint: 0.80791
+  wrist_3_joint: 0.06690
+  j_index_fle: 0.38999
+  j_thumb_fle: 0.18999
+  j_mrl_fle: 0.38999
