@@ -10,6 +10,7 @@ Parameters (ROS params):
  - rot_jitter_std (float): rotational jitter std (radians, default 0.01)
  - offset_xyz (list): offset [x,y,z] in end-effector frame (default [0,0,0])
  - offset_rpy (list): offset [roll,pitch,yaw] in end-effector frame (default [0,0,0])
+ - offset_quat (list): optional offset quaternion [x,y,z,w]; a non-zero quaternion overrides offset_rpy
 """
 import random
 
@@ -37,6 +38,8 @@ class MockGraspedObject(Node):
         self.declare_parameter('rot_jitter_std', 0.01)
         self.declare_parameter('offset_xyz', [0.0, 0.0, 0.0])
         self.declare_parameter('offset_rpy', [0.0, 0.0, 0.0])
+        # All zeros means 'not set', so offset_rpy remains backward compatible.
+        self.declare_parameter('offset_quat', [0.0, 0.0, 0.0, 0.0])
 
         self.frame = self.get_parameter('frame').get_parameter_value().string_value
         self.target_frame = self.get_parameter('target_frame').get_parameter_value().string_value
@@ -47,6 +50,14 @@ class MockGraspedObject(Node):
         self.rot_jitter_std = float(self.get_parameter('rot_jitter_std').get_parameter_value().double_value)
         self.offset_xyz = list(self.get_parameter('offset_xyz').get_parameter_value().double_array_value)
         self.offset_rpy = list(self.get_parameter('offset_rpy').get_parameter_value().double_array_value)
+        self.offset_quat = list(self.get_parameter('offset_quat').get_parameter_value().double_array_value)
+
+        if len(self.offset_xyz) != 3:
+            raise ValueError('offset_xyz must contain exactly 3 values: [x, y, z]')
+        if len(self.offset_rpy) != 3:
+            raise ValueError('offset_rpy must contain exactly 3 values: [roll, pitch, yaw]')
+        if len(self.offset_quat) != 4:
+            raise ValueError('offset_quat must contain exactly 4 values: [x, y, z, w]')
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
@@ -68,8 +79,18 @@ class MockGraspedObject(Node):
         p.pose.position.x = float(self.offset_xyz[0])
         p.pose.position.y = float(self.offset_xyz[1])
         p.pose.position.z = float(self.offset_xyz[2])
-        q = quaternion_from_euler(float(self.offset_rpy[0]), float(self.offset_rpy[1]), float(self.offset_rpy[2]))
-        # quaternion_from_euler returns [x, y, z, w]
+        quat_norm_sq = sum(float(component) ** 2 for component in self.offset_quat)
+        if quat_norm_sq > 1e-12:
+            # Normalize user input and prefer it over offset_rpy.
+            quat_norm = quat_norm_sq ** 0.5
+            q = [float(component) / quat_norm for component in self.offset_quat]
+        else:
+            q = quaternion_from_euler(
+                float(self.offset_rpy[0]),
+                float(self.offset_rpy[1]),
+                float(self.offset_rpy[2]),
+            )
+        # Both representations use [x, y, z, w].
         p.pose.orientation.x = q[0]
         p.pose.orientation.y = q[1]
         p.pose.orientation.z = q[2]

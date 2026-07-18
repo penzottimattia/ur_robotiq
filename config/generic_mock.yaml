@@ -12,17 +12,35 @@ mocks:
     frame: world
     target_frame: world
     rate: 1.0
-    offset_xyz: [-0.4, 0.4, 0.0]
-    offset_rpy: [0.0, 0.0, -1.57]
+    # offset_xyz: [-0.4, 0.4, 0.0]
+    # offset_rpy: [0.0, 0.0, -1.57]
+    offset_xyz:
+      - 0.53605
+      - 0.08749
+      - 0.15621
+    offset_quat:
+      - 0.80726
+      - 0.08835
+      - -0.1013
+      - 0.57466
     output_topic: /object_pose/vial_tube
     gt_topic: /object_pose/vial_tube_gt
 
-  - name: rack_mock
+  - name: cap_mock
     frame: world
     target_frame: world
     rate: 40.0
-    offset_xyz: [-0.4, 0.3, 0.0]
-    offset_rpy: [1.57, 0.0, 0.0]
+    # offset_xyz: [-0.4, 0.3, 0.0]
+    # offset_rpy: [1.57, 0.0, 0.0]
+    offset_xyz:
+      - 0.53070
+      - -0.1308
+      - -0.0968
+    offset_quat:
+      - 0.71564
+      - 0.06805
+      - 0.02507
+      - 0.69468
     output_topic: /object_pose/cap
     gt_topic: /object_pose/cap_gt
 
