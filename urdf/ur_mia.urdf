@@ -15,14 +15,14 @@
 	<xacro:arg name="script_filename" default="$(find ur_client_library)/resources/external_control.urscript"/>
 	<xacro:arg name="input_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_input_recipe.txt"/>
 	<xacro:arg name="output_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_output_recipe.txt"/>
-	<xacro:arg name="left_reverse_port" default="50001"/>
-	<xacro:arg name="left_script_sender_port" default="50002"/>
-	<xacro:arg name="left_trajectory_port" default="50003"/>
-	<xacro:arg name="left_script_command_port" default="50004"/>
-	<xacro:arg name="right_reverse_port" default="50101"/>
-	<xacro:arg name="right_script_sender_port" default="50102"/>
-	<xacro:arg name="right_trajectory_port" default="50103"/>
-	<xacro:arg name="right_script_command_port" default="50104"/>
+	<xacro:arg name="left_reverse_port" default="40001"/>
+	<xacro:arg name="left_script_sender_port" default="40002"/>
+	<xacro:arg name="left_trajectory_port" default="40003"/>
+	<xacro:arg name="left_script_command_port" default="40004"/>
+	<xacro:arg name="right_reverse_port" default="50001"/>
+	<xacro:arg name="right_script_sender_port" default="50002"/>
+	<xacro:arg name="right_trajectory_port" default="50003"/>
+	<xacro:arg name="right_script_command_port" default="50004"/>
 	<xacro:arg name="headless_mode" default="false"/>
 	<xacro:arg name="left_hand_serial_port" default="/dev/ttyUSB0"/>
 	<xacro:arg name="right_hand_serial_port" default="/dev/ttyUSB1"/>
