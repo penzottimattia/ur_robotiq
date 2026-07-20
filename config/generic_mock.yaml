@@ -8,21 +8,40 @@ static_camera_tf:
   enabled: true
 
 mocks:
+  
+  # - name: vial_mock
+  #   frame: world
+  #   target_frame: world
+  #   rate: 40.0
+  #   # offset_xyz: [-0.4, 0.4, 0.0]
+  #   # offset_rpy: [0.0, 0.0, -1.57]
+  #   offset_xyz:
+  #     - 0.53605
+  #     - 0.08749
+  #     - 0.15621
+  #   offset_quat:
+  #     - 0.80726
+  #     - 0.08835
+  #     - -0.1013
+  #     - 0.57466
+  #   output_topic: /object_pose/vial_tube
+  #   gt_topic: /object_pose/vial_tube_gt
+
   - name: vial_mock
-    frame: world
-    target_frame: world
-    rate: 1.0
+    frame: left_tool0
+    target_frame: left_tool0
+    rate: 40.0
     # offset_xyz: [-0.4, 0.4, 0.0]
     # offset_rpy: [0.0, 0.0, -1.57]
     offset_xyz:
-      - 0.53605
-      - 0.08749
-      - 0.15621
+      - -0.0792
+      - 0.08743
+      - 0.16931
     offset_quat:
-      - 0.80726
-      - 0.08835
-      - -0.1013
-      - 0.57466
+      - -0.0373
+      - 0.30416
+      - 0.15276
+      - 0.93954
     output_topic: /object_pose/vial_tube
     gt_topic: /object_pose/vial_tube_gt
 
@@ -46,23 +65,53 @@ mocks:
 
 objects:
 
+  - name: cap
+    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
+    pose_topic: /object_pose/cap
+    frame: world
+    scale: 1.0
+
   - name: cap_gt
     mesh: /ws/src/ur_robotiq/object/cap/cap.obj
     pose_topic: /object_pose/cap_gt
     frame: world
     scale: 1.0
 
+  - name: cap_avg
+    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
+    pose_topic: /object_detection/cap
+    frame: world
+    scale: 1.0
+
+  - name: vial_tube
+    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
+    pose_topic: /object_pose/vial_tube
+    frame: left_tool0
+    scale: 1.0
+
   - name: vial_tube_gt
     mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
     pose_topic: /object_pose/vial_tube_gt
+    frame: left_tool0
+    scale: 1.0
+
+  - name: vial_tube_avg
+    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
+    pose_topic: /object_detection/vial_tube
     frame: world
     scale: 1.0
 
 transforms:
-  - input_topic: /object_pose/cap_gt
+  - input_topic: /object_pose/cap
     output_topic: /object_detection/cap
     target_frame: world
+    average_count: 50
 
-  - input_topic: /object_pose/vial_tube_gt
+  - input_topic: /object_pose/vial_tube
     output_topic: /object_detection/vial_tube
     target_frame: world
+    average_count: 50
+
+  # - input_topic: /object_detection/vial_tube
+  #   output_topic: /object_transform/vial_tube
+  #   target_frame: left_tool0
