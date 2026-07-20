@@ -4,20 +4,27 @@
 The node publishes one output for every ``average_count`` successfully
 transformed input poses. Set ``average_count`` to 1 to disable averaging.
 
+The transform lookup deliberately uses ``rclpy.time.Time()`` so tf2 applies
+the latest transform currently available, regardless of the input pose stamp.
+
 ROS parameters:
- - input_topic (string): input PoseStamped topic (default '/mesh_pose')
- - output_topic (string): output PoseStamped topic (default '/object_pose_world')
- - target_frame (string): destination frame (default 'world')
- - average_count (int): number of input poses per output (default 1)
+- input_topic (string): input PoseStamped topic (default '/mesh_pose')
+- output_topic (string): output PoseStamped topic
+  (default '/object_pose_world')
+- target_frame (string): destination frame (default 'world')
+- average_count (int): number of input poses per output (default 1)
 """
+
 import math
 
 import rclpy
-from rclpy.node import Node
 from geometry_msgs.msg import PoseStamped
-from tf2_ros import Buffer, TransformListener
+from rclpy.duration import Duration
+from rclpy.node import Node
+from rclpy.time import Time
+from tf2_ros import Buffer, TransformException, TransformListener
 import tf2_geometry_msgs  # noqa: F401; registers PoseStamped with tf2
-from time import sleep
+
 
 class TFPoseTransformer(Node):
     def __init__(self):
@@ -28,91 +35,98 @@ class TFPoseTransformer(Node):
         self.declare_parameter('target_frame', 'world')
         self.declare_parameter('average_count', 1)
 
-        self.input_topic = self.get_parameter('input_topic').value
-        self.output_topic = self.get_parameter('output_topic').value
+        input_topic = self.get_parameter('input_topic').value
+        output_topic = self.get_parameter('output_topic').value
         self.target_frame = self.get_parameter('target_frame').value
-        self.average_count = int(self.get_parameter('average_count').value)
-        if self.average_count < 1:
-            self.get_logger().warning('average_count must be >= 1; using 1')
-            self.average_count = 1
+        self.average_count = max(
+            1, int(self.get_parameter('average_count').value)
+        )
 
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
-
-        sleep(1)
-
-        self.pub = self.create_publisher(PoseStamped, self.output_topic, 10)
-        self.sub = self.create_subscription(
-            PoseStamped, self.input_topic, self._pose_cb, 10
+        self.publisher = self.create_publisher(PoseStamped, output_topic, 10)
+        self.subscription = self.create_subscription(
+            PoseStamped, input_topic, self.pose_callback, 10
         )
+        self.pose_batch = []
 
-        self._pose_batch = []
         self.get_logger().info(
-            f'Subscribing to "{self.input_topic}", publishing to '
-            f'"{self.output_topic}" in frame "{self.target_frame}"; '
-            f'averaging {self.average_count} pose(s) per output'
+            f'Transforming {input_topic} to {self.target_frame} using the '
+            f'latest available TF; publishing to {output_topic}; '
+            f'average_count={self.average_count}'
         )
 
-    def _pose_cb(self, msg: PoseStamped):
-        if not msg.header.frame_id:
-            self.get_logger().warning(
-                'Received PoseStamped with empty header.frame_id; ignoring'
-            )
-            return
-
+    def pose_callback(self, pose_msg):
         try:
-            if msg.header.frame_id == self.target_frame:
-                transformed = msg
-            else:
-                transformed = self.tf_buffer.transform(msg, self.target_frame)
-        except Exception as exc:
+            # Time() means "latest available" in tf2. Passing the source frame
+            # explicitly avoids using pose_msg.header.stamp for the lookup.
+            transform = self.tf_buffer.lookup_transform(
+                self.target_frame,
+                pose_msg.header.frame_id,
+                Time(),
+                timeout=Duration(seconds=0.2),
+            )
+            transformed = tf2_geometry_msgs.do_transform_pose_stamped(
+                pose_msg, transform
+            )
+        except TransformException as exc:
             self.get_logger().warning(
-                f'Could not transform from {msg.header.frame_id} '
-                f'to {self.target_frame}: {exc}'
+                f'Could not transform from {pose_msg.header.frame_id!r} '
+                f'to {self.target_frame!r}: {exc}'
             )
             return
 
-        self._pose_batch.append(transformed)
-        if len(self._pose_batch) < self.average_count:
+        self.pose_batch.append(transformed)
+        if len(self.pose_batch) < self.average_count:
             return
 
-        output = self._average_poses(self._pose_batch)
-        self._pose_batch.clear()  # non-overlapping batches of N detections
-        self.pub.publish(output)
+        output = self.average_poses(self.pose_batch)
+        self.pose_batch.clear()
+        self.publisher.publish(output)
 
-    def _average_poses(self, poses):
-        """Average position and orientation of target-frame poses."""
+    def average_poses(self, poses):
         output = PoseStamped()
         output.header.frame_id = self.target_frame
-        output.header.stamp = poses[-1].header.stamp
+        # The result represents transforms sampled "now". Use the node clock
+        # rather than retaining an unrelated input timestamp.
+        output.header.stamp = self.get_clock().now().to_msg()
 
         count = float(len(poses))
         output.pose.position.x = sum(p.pose.position.x for p in poses) / count
         output.pose.position.y = sum(p.pose.position.y for p in poses) / count
         output.pose.position.z = sum(p.pose.position.z for p in poses) / count
 
-        # Quaternions q and -q represent the same rotation. Align every
-        # quaternion to the first one before taking a normalized component mean.
+        # Hemisphere-align quaternions before normalized component averaging
+        # so q and -q do not cancel even though they represent the same pose.
         reference = poses[0].pose.orientation
-        ref = (reference.x, reference.y, reference.z, reference.w)
-        accum = [0.0, 0.0, 0.0, 0.0]
-        for stamped_pose in poses:
-            q_msg = stamped_pose.pose.orientation
-            q = (q_msg.x, q_msg.y, q_msg.z, q_msg.w)
-            if sum(a * b for a, b in zip(q, ref)) < 0.0:
-                q = tuple(-value for value in q)
-            for index, value in enumerate(q):
-                accum[index] += value
+        quaternions = []
+        for item in poses:
+            q = item.pose.orientation
+            dot = (
+                reference.x * q.x
+                + reference.y * q.y
+                + reference.z * q.z
+                + reference.w * q.w
+            )
+            sign = -1.0 if dot < 0.0 else 1.0
+            quaternions.append(
+                (sign * q.x, sign * q.y, sign * q.z, sign * q.w)
+            )
 
-        norm = math.sqrt(sum(value * value for value in accum))
+        x = sum(q[0] for q in quaternions) / count
+        y = sum(q[1] for q in quaternions) / count
+        z = sum(q[2] for q in quaternions) / count
+        w = sum(q[3] for q in quaternions) / count
+        norm = math.sqrt(x * x + y * y + z * z + w * w)
+
         if norm < 1e-12:
-            # Degenerate mean: retain the first valid orientation.
-            averaged_q = ref
+            output.pose.orientation.w = 1.0
         else:
-            averaged_q = tuple(value / norm for value in accum)
+            output.pose.orientation.x = x / norm
+            output.pose.orientation.y = y / norm
+            output.pose.orientation.z = z / norm
+            output.pose.orientation.w = w / norm
 
-        orientation = output.pose.orientation
-        orientation.x, orientation.y, orientation.z, orientation.w = averaged_q
         return output
 
 
