@@ -285,6 +285,30 @@ def generate_launch_description():
         }],
     )
 
+    left_dashboard_client = Node(
+        package='ur_robot_driver',
+        executable='dashboard_client',
+        namespace='left_ur',
+        name='dashboard_client',
+        output='screen',
+        emulate_tty=True,
+        parameters=[
+            {'robot_ip': LaunchConfiguration('left_robot_ip')},
+        ],
+    )
+
+    right_dashboard_client = Node(
+        package='ur_robot_driver',
+        executable='dashboard_client',
+        namespace='right_ur',
+        name='dashboard_client',
+        output='screen',
+        emulate_tty=True,
+        parameters=[
+            {'robot_ip': LaunchConfiguration('right_robot_ip')},
+        ],
+    )
+
     cartesian_stitcher_node = Node(
         package='ur_robotiq',
         executable='cartesian_stitcher_node',
@@ -443,6 +467,8 @@ def generate_launch_description():
         right_tracker_launch,
         left_glove_node,
         right_glove_node,
+        left_dashboard_client,
+        right_dashboard_client,
         cartesian_stitcher_node,
         vive_hand_node,
         vive_gripper_node,

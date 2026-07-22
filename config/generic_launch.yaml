@@ -10,7 +10,7 @@ static_camera_tf:
   enabled: true
 
 objects:
-  - name: vial
+  - name: vial_tube
     mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
     pose_topic: /object_pose/vial_tube
     frame: camera_color_optical_frame
@@ -22,7 +22,7 @@ objects:
     frame: camera_color_optical_frame
     scale: 1.0
 
-  - name: vial_avg
+  - name: vial_tube_avg
     mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
     pose_topic: /object_detection/vial_tube
     frame: world
