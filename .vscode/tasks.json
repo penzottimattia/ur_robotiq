@@ -1,0 +1,54 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		 {
+            "label": "Task: ros2_control",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py use_cartesian_stitcher:=true left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 left_mia_port:=/dev/ttyUSB1 right_mia_port:=/dev/ttyUSB0 mode:=none"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+				"env": {
+					"MY_MAGIC_NUMBER": "0.1"
+				}
+            },
+            "problemMatcher": [],
+        },
+		{
+            "label": "Task: ros2_mocap",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq generic_from_config.launch.py"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+            },
+            "problemMatcher": [],
+        },
+		{
+			"label": "Task: ros2_ur",
+			"type": "shell",
+			"command": "/ws/src/ur_robotiq/scripts/ur_dashboard.sh",
+			"args": [
+				"${input:ur_string_args}",
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		}
+	],
+	"inputs": [
+		{
+			"id": "ur_string_args",
+			"type": "promptString",
+			"description": "Enter the arguments for the ur_dashboard.sh script",
+			"default": "stop play"
+		}
+	]
+}
