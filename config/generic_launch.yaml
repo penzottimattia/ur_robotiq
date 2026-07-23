@@ -12,7 +12,7 @@ static_camera_tf:
 objects:
   - name: vial_tube
     mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
-    pose_topic: /object_pose/vial_tube
+    pose_topic: /object_pose/white_vial_tube
     frame: camera_color_optical_frame
     scale: 1.0
 
@@ -35,15 +35,15 @@ objects:
     scale: 1.0
 
 transforms:
-  - input_topic: /object_pose/vial_tube
+  - input_topic: /object_pose/white_vial_tube
     output_topic: /object_detection/vial_tube
     target_frame: world
-    average_count: 50
+    average_count: 10
 
   - input_topic: /object_pose/cap
     output_topic: /object_detection/cap
     target_frame: world
-    average_count: 50
+    average_count: 10
 
 # Camera nodes to launch (USB cameras). Each entry will start a
 # `usb_camera_node` from this package with the provided parameters.
