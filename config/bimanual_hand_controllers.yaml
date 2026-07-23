@@ -18,10 +18,10 @@ controller_manager:
       type: joint_state_broadcaster/JointStateBroadcaster
 
     left_gripper_controller:
-      type: joint_trajectory_controller/JointTrajectoryController
+      type: pid_controller/PidController
 
     right_gripper_controller:
-      type: joint_trajectory_controller/JointTrajectoryController
+      type: pid_controller/PidController
 
     left_hand_controller:
       type: position_controllers/JointGroupPositionController
@@ -37,33 +37,53 @@ controller_manager:
 
 left_gripper_controller:
   ros__parameters:
-    joints:
+    dof_names:
       - left_hand_j_index_fle
       - left_hand_j_thumb_fle
       - left_hand_j_mrl_fle
-    command_interfaces:
-      - position
-    state_interfaces:
-      - position
-      - velocity
-    constraints:
-      goal_time: 0.0
-    open_loop_control: true
+    command_interface: velocity
+    reference_and_state_interfaces: ["position"]
+    gains:
+      left_hand_j_thumb_fle:
+        p: 5.5
+        i: 0.2
+        d: 0.0
+        antiwindup_strategy: "back_calculation"
+      left_hand_j_index_fle:
+        p: 5.0
+        i: 0.01
+        d: 0.0
+        antiwindup_strategy: "back_calculation"
+      left_hand_j_mrl_fle:
+        p: 5.0
+        i: 0.01
+        d: 0.0
+        antiwindup_strategy: "back_calculation"
 
 right_gripper_controller:
   ros__parameters:
-    joints:
+    dof_names:
       - right_hand_j_index_fle
       - right_hand_j_thumb_fle
       - right_hand_j_mrl_fle
-    command_interfaces:
-      - position
-    state_interfaces:
-      - position
-      - velocity
-    constraints:
-      goal_time: 0.0
-    open_loop_control: true
+    command_interface: velocity
+    reference_and_state_interfaces: ["position"]
+    gains:
+      right_hand_j_thumb_fle:
+        p: 5.5
+        i: 0.2
+        d: 0.0
+        antiwindup_strategy: "back_calculation"
+      right_hand_j_index_fle:
+        p: 5.0
+        i: 0.01
+        d: 0.0
+        antiwindup_strategy: "back_calculation"
+      right_hand_j_mrl_fle:
+        p: 5.0
+        i: 0.01
+        d: 0.0
+        antiwindup_strategy: "back_calculation"
       
 left_arm_controller:
   ros__parameters:

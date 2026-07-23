@@ -123,7 +123,7 @@ def generate_launch_description():
         "'", LaunchConfiguration('mode'), "' == 'full_mock'",
     ])
     use_mock_grippers = PythonExpression([
-        "'", LaunchConfiguration('mode'), "' in ['full_mock', 'mock_grippers_only', 'calib']",
+        "'", LaunchConfiguration('mode'), "' in ['full_mock', 'mock_grippers_only']",
     ])
     use_calib_probe = PythonExpression([
         "'", LaunchConfiguration('mode'), "' == 'calib'",
@@ -265,8 +265,9 @@ def generate_launch_description():
             'tf_prefix': 'left_',
             'joint_state_topic': '/left_arm_controller/commands',
             'trajectory_topic': '/left_arm_controller/joint_trajectory',
-            'gripper_topic': '/left_gripper_controller/joint_trajectory',
+            'gripper_topic': '/left_gripper_controller/reference',
             'gripper_joint_list': ['hand_j_index_fle', 'hand_j_thumb_fle', 'hand_j_mrl_fle'],
+            'gripper_as_multi_dof': True
         }],
     )
 
@@ -280,8 +281,9 @@ def generate_launch_description():
             'tf_prefix': 'right_',
             'joint_state_topic': '/right_arm_controller/commands',
             'trajectory_topic': '/right_arm_controller/joint_trajectory',
-            'gripper_topic': '/right_gripper_controller/joint_trajectory',
+            'gripper_topic': '/right_gripper_controller/reference',
             'gripper_joint_list': ['hand_j_index_fle', 'hand_j_thumb_fle', 'hand_j_mrl_fle'],
+            'gripper_as_multi_dof': True
         }],
     )
 
