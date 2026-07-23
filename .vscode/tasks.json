@@ -1,7 +1,20 @@
 {
 	"version": "2.0.0",
 	"tasks": [
-		 {
+		{
+			"label": "Task: ros2_build",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && colcon build"
+			],
+			"problemMatcher": [],
+			"options": {
+				"cwd": "/ws"
+			}
+		},
+		{
             "label": "Task: ros2_control",
             "type": "shell",
             "command": "bash",
@@ -12,10 +25,11 @@
             "options": {
                 "cwd": "${workspaceFolder}",
 				"env": {
-					"MY_MAGIC_NUMBER": "0.1"
+					"MY_MAGIC_NUMBER": "0.01"
 				}
             },
             "problemMatcher": [],
+			"dependsOn": "Task: ros2_build"
         },
 		{
             "label": "Task: ros2_mocap",
