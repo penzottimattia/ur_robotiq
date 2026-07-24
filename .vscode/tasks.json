@@ -20,7 +20,7 @@
             "command": "bash",
             "args": [
                 "-c",
-				"source /ws/install/setup.bash && ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py use_cartesian_stitcher:=true left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 left_mia_port:=/dev/ttyUSB0 right_mia_port:=/dev/ttyUSB1 mode:=none"
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py use_cartesian_stitcher:=true left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 right_mia_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTGRD1P9-if00-port0 left_mia_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTBWH3EC-if00-port0 mode:=none"
             ],
             "options": {
                 "cwd": "${workspaceFolder}",
