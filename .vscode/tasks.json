@@ -20,12 +20,12 @@
             "command": "bash",
             "args": [
                 "-c",
-				"source /ws/install/setup.bash && ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py use_cartesian_stitcher:=true left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 left_mia_port:=/dev/ttyUSB1 right_mia_port:=/dev/ttyUSB0 mode:=none"
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py use_cartesian_stitcher:=true left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 left_mia_port:=/dev/ttyUSB0 right_mia_port:=/dev/ttyUSB1 mode:=none"
             ],
             "options": {
                 "cwd": "${workspaceFolder}",
 				"env": {
-					"MY_MAGIC_NUMBER": "0.01"
+					"MY_MAGIC_NUMBER": "0.00"
 				}
             },
             "problemMatcher": [],
