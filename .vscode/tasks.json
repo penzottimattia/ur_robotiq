@@ -32,6 +32,32 @@
 			"dependsOn": "Task: ros2_build"
         },
 		{
+			"label": "Task: ros2_mia_left",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && ros2 launch mia_hand_ros2_control mia_hand_system_interface_launch.py serial_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTBWH3EC-if00-port0 controller:=group_pos_trajectory_controller joint_limits_config_file:='/ws/src/ur_robotiq/config/left_hand_joint_limits.yaml' transmission_config_file:='/ws/src/ur_robotiq/config/left_hand_transmission.yaml' rqt_joint_trajectory_controller_gui:=true"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+			"label": "Task: ros2_mia_right",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && ros2 launch mia_hand_ros2_control mia_hand_system_interface_launch.py serial_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTGRD1P9-if00-port0 controller:=group_pos_trajectory_controller joint_limits_config_file:='/ws/src/ur_robotiq/config/right_hand_joint_limits.yaml' transmission_config_file:='/ws/src/ur_robotiq/config/right_hand_transmission.yaml' rqt_joint_trajectory_controller_gui:=true"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
             "label": "Task: ros2_mocap",
             "type": "shell",
             "command": "bash",
@@ -55,7 +81,7 @@
 				"cwd": "${workspaceFolder}",
 			},
 			"problemMatcher": [],
-		}
+		},
 	],
 	"inputs": [
 		{
