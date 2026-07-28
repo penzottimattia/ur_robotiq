@@ -25,7 +25,7 @@
             "options": {
                 "cwd": "${workspaceFolder}",
 				"env": {
-					"MY_MAGIC_NUMBER": "0.00"
+					"MY_MAGIC_NUMBER": "0.05"
 				}
             },
             "problemMatcher": [],
