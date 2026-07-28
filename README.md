@@ -238,3 +238,26 @@ ros2 launch ur_robotiq export_unit_assets.launch.py \
 ## License
 
 This project is licensed under the Apache License 2.0. See `LICENSE` for details.
+
+# Setup the UR Teach Pendant
+
+Three steps are required to prepare the UR robots to work seamlessly with this package, most of which are well documented from several sources.
+
+  1. [External Control](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html)
+  2. [Networking](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/network_setup.html) 
+  3. [Tool Communication](https://github.com/UniversalRobots/Universal_Robots_ToolComm_Forwarder_URCap)
+
+> **Warning**
+> In the `External Control` options, confirm that the custom port differs between the two robots.
+
+Since two robots are used with two Robotiq Grippers, you'll need a little more effort on the third step. Once the `ToolComm Forwarder` is installed, choose one robot and connect from your pc through [Shell Access](https://docs.universal-robots.com/tutorials/urscript-tutorials/ssh.html).
+
+```bash
+# You can use this command to check that socat is running on TCP port 54321
+top -c
+
+# Once connected to a robot shell session we need to manually edit the ToolComm Forwarder
+nano /ursim/GUI/felix-cache/bundle185/data/com/fzi/rs485/impl/daemon/daemon-rs485.py
+```
+
+This will open a terminal-based text editor where you need to change socat TCP port 54321 to 54322. Use arrows to move the cursor and `ctrl + s` to save. Then `ctrl + x`. Reboot the robot and then check again with `top -c` which TCP port is now used.
