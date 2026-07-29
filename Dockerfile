@@ -28,12 +28,6 @@ RUN bash -c 'source /opt/ros/$ROS_DISTRO/setup.bash && colcon build --install-ba
 WORKDIR /
 RUN rm -rf /ws
 
-ENV ROS_DOMAIN_ID=0
-ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
-ENV FASTRTPS_DEFAULT_PROFILES_FILE=/fastrtps_profile.xml
-
-COPY fastrtps_profile.xml /fastrtps_profile.xml
-
 RUN apt update && apt install -y \
     nano \
     && rm -rf /var/lib/apt/lists/*
