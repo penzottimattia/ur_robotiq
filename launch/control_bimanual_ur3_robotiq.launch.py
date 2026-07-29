@@ -52,6 +52,8 @@ def generate_launch_description():
 
     left_robot_ip_arg = DeclareLaunchArgument('left_robot_ip', default_value='0.0.0.0')
     right_robot_ip_arg = DeclareLaunchArgument('right_robot_ip', default_value='0.0.0.0')
+    left_custom_port_arg = DeclareLaunchArgument('left_custom_port', default_value='50002')
+    right_custom_port_arg = DeclareLaunchArgument('right_custom_port', default_value='50102')
     left_tool_device_name_arg = DeclareLaunchArgument(
         'left_tool_device_name', default_value='/tmp/ttyUR_left',
         description='Virtual serial device path for left gripper tool communication',
@@ -67,16 +69,6 @@ def generate_launch_description():
     right_tool_tcp_port_arg = DeclareLaunchArgument(
         'right_tool_tcp_port', default_value='54322',
         description='TCP port for right UR tool communication bridge',
-    )
-    left_gello_port_arg = DeclareLaunchArgument(
-        'left_gello_port',
-        default_value='/dev/ttyUSB0',
-        description='Serial port for left GELLO (used only when use_gello=true)',
-    )
-    right_gello_port_arg = DeclareLaunchArgument(
-        'right_gello_port',
-        default_value='/dev/ttyUSB1',
-        description='Serial port for right GELLO (used only when use_gello=true)',
     )
     base_poses_file_arg = DeclareLaunchArgument(
         'base_poses_file',
@@ -181,6 +173,8 @@ def generate_launch_description():
         ' use_calib_probe:=', use_calib_probe,
         ' left_robot_ip:=', LaunchConfiguration('left_robot_ip'),
         ' right_robot_ip:=', LaunchConfiguration('right_robot_ip'),
+        ' left_script_sender_port:=', LaunchConfiguration('left_custom_port'),
+        ' right_script_sender_port:=', LaunchConfiguration('right_custom_port'),
         ' base_poses_file:=', LaunchConfiguration('base_poses_file'),
         ' left_gripper_com_port:=', LaunchConfiguration('left_tool_device_name'),
         ' right_gripper_com_port:=', LaunchConfiguration('right_tool_device_name'),
@@ -401,8 +395,6 @@ def generate_launch_description():
         condition=IfCondition(use_gello),
         launch_arguments=[
             ('use_stitcher', LaunchConfiguration('use_gello_stitcher')),
-            ('left_gello_port', LaunchConfiguration('left_gello_port')),
-            ('right_gello_port', LaunchConfiguration('right_gello_port')),
             ('mode_transition_delay_seconds', '2.0'),
             ('stitched_output_topic', '/commands')
         ],
@@ -469,12 +461,12 @@ def generate_launch_description():
         right_program_arg,
         left_robot_ip_arg,
         right_robot_ip_arg,
+        left_custom_port_arg,
+        right_custom_port_arg,
         left_tool_device_name_arg,
         right_tool_device_name_arg,
         left_tool_tcp_port_arg,
         right_tool_tcp_port_arg,
-        left_gello_port_arg,
-        right_gello_port_arg,
         base_poses_file_arg,
         proportional_gain_arg,
         feedforward_gain_arg,
