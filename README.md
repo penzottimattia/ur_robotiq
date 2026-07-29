@@ -2,6 +2,22 @@
 
 ROS 2 Jazzy package for a bimanual setup with two UR3 manipulators and Robotiq 2F-85 grippers.
 
+### Minimal reproducible deployment
+
+```bash
+# start deployment in the backgound
+docker start ur_robotiq || (echo "Creating a new one" && docker run -dit --net host --privileged --name ur_robotiq --entrypoint bash ghcr.io/penzottimattia/ur_robotiq:gello)
+
+# edit "port" field in GELLO_CONFIGS (use arrows to move, ctrl + s to save, ctrl +x to exit)
+docker exec -it ur_robotiq nano gello_publisher.py
+
+# start the system (change robot ip addresses an customd ports as needed)
+docker exec -it ur_robotiq bash -c 'source /opt/ros/humble/ur_robotiq/setup.bash; ros2 launch ur_robotiq control_bimanual_ur3_robotiq.launch.py mode:=none use_gello:=true left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 left_custom_port:=50002 right_custom_port:=50102'
+
+# use this command to list the full set of parameters (gripper force and others)
+docker exec -it ur_robotiq bash -c 'source /opt/ros/humble/ur_robotiq/setup.bash; ros2 launch ur_robotiq control_bimanual_ur3_robotiq.launch.py -s
+```
+
 ## What this package provides
 
 - Combined bimanual URDF/Xacro model (`urdf/ur_robotiq.urdf`)
@@ -247,7 +263,7 @@ Three steps are required to prepare the UR robots to work seamlessly with this p
   2. [Networking](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/network_setup.html) 
   3. [Tool Communication](https://github.com/UniversalRobots/Universal_Robots_ToolComm_Forwarder_URCap)
 
-> **Warning**
+> [!CAUTION]
 > In the `External Control` options, confirm that the custom port differs between the two robots.
 
 Since two robots are used with two Robotiq Grippers, you'll need a little more effort on the third step. Once the `ToolComm Forwarder` is installed, choose one robot and connect from your pc through [Shell Access](https://docs.universal-robots.com/tutorials/urscript-tutorials/ssh.html).
