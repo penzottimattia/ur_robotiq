@@ -1,17 +1,14 @@
-# Joints Limits of a default Mia Hand. It does not represent any REAL Mia Hand
-# device.
-#
-# Last modified: 14-Sep-2022
+# MNS1
 joint_limits:
   j_index_fle:
-    min_position: -1.399999976
-    max_position: +1.399999976
+    min_position: -1.13
+    max_position: 1.15
   j_mrl_fle:
-    min_position: 0
-    max_position: 1.396260023
+    min_position: -0.05
+    max_position: 1.16
   j_thumb_fle:
-    min_position: 0
-    max_position: 1.134500027
-  j_thumb_opp:
+    min_position: 0.01
+    max_position: 1.18
+  j_thumb_opp: # default values, figure out how to get this from the hand
     min_position: -0.628
     max_position: 0.000

@@ -72,13 +72,13 @@ for action in "${actions[@]}"; do
 
 done
 
-# All inputs are validated above. Execute each action on the left robot.
-for action in "${actions[@]}"; do
-    echo "Calling '$action' on right_ur..."
-    ros2 service call \
-        "/right_ur/dashboard_client/$action" \
-        std_srvs/srv/Trigger
+# All inputs are validated above. Execute each action on the right robot.
+# for action in "${actions[@]}"; do
+#     echo "Calling '$action' on right_ur..."
+#     ros2 service call \
+#         "/right_ur/dashboard_client/$action" \
+#         std_srvs/srv/Trigger
 
-done
+# done
 
 echo "All requested actions completed successfully."

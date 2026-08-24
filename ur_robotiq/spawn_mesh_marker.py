@@ -12,6 +12,7 @@ import rclpy
 from rclpy.node import Node
 from visualization_msgs.msg import Marker
 from geometry_msgs.msg import PoseStamped
+from tf2_ros import TransformStamped, TransformBroadcaster
 from ament_index_python.packages import get_package_share_directory
 from typing import Optional
 
@@ -25,6 +26,7 @@ class MeshMarkerNode(Node):
         self.declare_parameter('mesh', '')
         self.declare_parameter('pose_topic', '/mesh_pose')
         self.declare_parameter('frame', '')
+        self.declare_parameter('child_frame', '')
         self.declare_parameter('scale', 1.0)
 
         mesh_path = self.get_parameter('mesh').get_parameter_value().string_value
@@ -32,6 +34,7 @@ class MeshMarkerNode(Node):
         frame_override = self.get_parameter('frame').get_parameter_value().string_value
         scale = float(self.get_parameter('scale').get_parameter_value().double_value)
         self.name = self.get_parameter('name').get_parameter_value().string_value
+        self.child_frame = self.get_parameter('child_frame').get_parameter_value().string_value
 
         if not mesh_path:
             self.get_logger().error('Parameter "mesh" is required and must be an absolute path to the mesh file')
@@ -57,6 +60,8 @@ class MeshMarkerNode(Node):
         self.sub = self.create_subscription(PoseStamped, pose_topic, self._pose_cb, 10)
         self.timer = self.create_timer(0.1, self.publish_marker)
         self.get_logger().info(f'Waiting for PoseStamped on "{pose_topic}" to publish mesh {self.mesh_resource}')
+
+        self.tf_broadcaster = TransformBroadcaster(self)
 
     def _pose_cb(self, msg: PoseStamped):
         self.latest_pose = msg
@@ -94,6 +99,17 @@ class MeshMarkerNode(Node):
         m.lifetime.sec = 0
         m.lifetime.nanosec = 0
         self.pub.publish(m)
+
+        if self.child_frame:
+            t = TransformStamped()
+            t.header.frame_id = frame_id
+            t.header.stamp = self.latest_pose.header.stamp
+            t.child_frame_id = self.child_frame
+            t.transform.translation.x = self.latest_pose.pose.position.x
+            t.transform.translation.y = self.latest_pose.pose.position.y
+            t.transform.translation.z = self.latest_pose.pose.position.z
+            t.transform.rotation = self.latest_pose.pose.orientation
+            self.tf_broadcaster.sendTransform(t)
 
 
 def main(args=None):

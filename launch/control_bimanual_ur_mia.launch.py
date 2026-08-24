@@ -236,7 +236,8 @@ def generate_launch_description():
     bimanual_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager'],
+        # arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager'],
+        arguments=['left_arm_controller', 'left_gripper_controller', '--controller-manager', '/controller_manager'],
         output='screen',
         condition=IfCondition(PythonExpression([
             "'", LaunchConfiguration('use_cartesian_stitcher'), "' == 'true' and '",
@@ -247,7 +248,8 @@ def generate_launch_description():
     stopped_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller', '--controller-manager', '/controller_manager'],
+        # arguments=['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller', '--controller-manager', '/controller_manager'],
+        arguments=['left_cartesian_controller', 'left_hand_traj_controller', '--controller-manager', '/controller_manager'],
         output='screen',
         condition=IfCondition(PythonExpression([
             "'", LaunchConfiguration('use_cartesian_stitcher'), "' != 'true' and '",
@@ -297,6 +299,7 @@ def generate_launch_description():
         parameters=[
             {'robot_ip': LaunchConfiguration('left_robot_ip')},
         ],
+        condition=UnlessCondition(use_mock_hardware) 
     )
 
     right_dashboard_client = Node(
@@ -309,6 +312,7 @@ def generate_launch_description():
         parameters=[
             {'robot_ip': LaunchConfiguration('right_robot_ip')},
         ],
+        condition=UnlessCondition(use_mock_hardware)
     )
 
     cartesian_stitcher_node = Node(
@@ -470,7 +474,7 @@ def generate_launch_description():
         left_glove_node,
         right_glove_node,
         left_dashboard_client,
-        right_dashboard_client,
+        # right_dashboard_client,
         cartesian_stitcher_node,
         vive_hand_node,
         vive_gripper_node,

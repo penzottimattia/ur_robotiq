@@ -30,7 +30,7 @@ mocks:
   - name: vial_mock
     frame: left_tool0
     target_frame: left_tool0
-    rate: 40.0
+    rate: 5.0
     # offset_xyz: [-0.4, 0.4, 0.0]
     # offset_rpy: [0.0, 0.0, -1.57]
     offset_xyz:
@@ -48,7 +48,7 @@ mocks:
   - name: cap_mock
     frame: world
     target_frame: world
-    rate: 40.0
+    rate: 5.0
     # offset_xyz: [-0.4, 0.3, 0.0]
     # offset_rpy: [1.57, 0.0, 0.0]
     offset_xyz:
@@ -101,16 +101,28 @@ objects:
     frame: world
     scale: 1.0
 
+  - name: vial_tube_est
+    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
+    pose_topic: /ll_asset_publisher_pose
+    frame: world
+    scale: 1.0
+
+  - name: cap_est
+    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
+    pose_topic: /rr_asset_publisher_pose
+    frame: world
+    scale: 1.0
+
 transforms:
   - input_topic: /object_pose/cap
     output_topic: /object_detection/cap
     target_frame: world
-    average_count: 50
+    average_count: 5
 
   - input_topic: /object_pose/vial_tube
     output_topic: /object_detection/vial_tube
     target_frame: world
-    average_count: 50
+    average_count: 5
 
   # - input_topic: /object_detection/vial_tube
   #   output_topic: /object_transform/vial_tube
