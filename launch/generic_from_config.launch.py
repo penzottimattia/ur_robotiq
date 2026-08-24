@@ -48,6 +48,7 @@ def _launch_from_config(context, *args, **kwargs):
         pose_topic = obj.get('pose_topic', '/mesh_pose')
         frame = obj.get('frame', '')
         scale = obj.get('scale', 1.0)
+        child_frame = obj.get('child_frame', '')
 
         params = [{
             'name': obj.get('name', os.path.basename(mesh)),
@@ -55,6 +56,7 @@ def _launch_from_config(context, *args, **kwargs):
             'pose_topic': pose_topic,
             'frame': frame,
             'scale': float(scale),
+            'child_frame': child_frame
         }]
 
         nodes.append(Node(

@@ -10,41 +10,57 @@ static_camera_tf:
   enabled: true
 
 objects:
-  - name: vial_tube
-    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
-    pose_topic: /object_pose_fused/white_vial_tube
+  - name: black_bolt
+    mesh: /ws/src/ur_robotiq/object/black_bolt/black_bolt.obj
+    pose_topic: /object_pose_fused/white_bolt
     frame: robotcam_color_optical_frame
     scale: 1.0
 
-  - name: cap
-    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
-    pose_topic: /object_pose_fused/cap
+  - name: black_nut
+    mesh: /ws/src/ur_robotiq/object/black_nut/black_nut.obj
+    pose_topic: /object_pose_fused/red_nut
     frame: robotcam_color_optical_frame
     scale: 1.0
 
-  - name: vial_tube_avg
-    mesh: /ws/src/ur_robotiq/object/vial_tube/vial_tube.obj
-    pose_topic: /object_detection/vial_tube
+  - name: black_nut_avg
+    mesh: /ws/src/ur_robotiq/object/black_nut/black_nut.obj
+    pose_topic: /object_detection/black_nut
     frame: world
+    child_frame: nut_avg
     scale: 1.0
 
-  - name: cap_avg
-    mesh: /ws/src/ur_robotiq/object/cap/cap.obj
-    pose_topic: /object_detection/cap
+  - name: black_bolt_avg
+    mesh: /ws/src/ur_robotiq/object/black_bolt/black_bolt.obj
+    pose_topic: /object_detection/black_bolt
     frame: world
+    child_frame: bolt_avg
+    scale: 1.0
+
+  - name: black_bolt_est
+    mesh: /ws/src/ur_robotiq/object/black_bolt/black_bolt.obj
+    pose_topic: /rr_asset_publisher_pose
+    frame: world
+    child_frame: bolt_est
+    scale: 1.0
+
+  - name: black_nut_est
+    mesh: /ws/src/ur_robotiq/object/black_nut/black_nut.obj
+    pose_topic: /ll_asset_publisher_pose
+    frame: world
+    child_frame: nut_est
     scale: 1.0
 
 transforms:
-  - input_topic: /object_pose_fused/white_vial_tube
-    output_topic: /object_detection/vial_tube
+  - input_topic: /object_pose_fused/white_bolt
+    output_topic: /object_detection/black_bolt
     target_frame: world
-    average_count: 5
+    publish_rate: 2.0
 
-  - input_topic: /object_pose_fused/cap
-    output_topic: /object_detection/cap
+  - input_topic: /object_pose_fused/red_nut
+    output_topic: /object_detection/black_nut
     target_frame: world
-    average_count: 5
-
+    publish_rate: 2.0
+    
 # Camera nodes to launch (USB cameras). Each entry will start a
 # `usb_camera_node` from this package with the provided parameters.
 # cameras:

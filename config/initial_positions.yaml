@@ -9,15 +9,35 @@ left:
   # wrist_2_joint:        -1.239481
   # wrist_3_joint:        0.0
   
-  shoulder_pan_joint: 0.45572
-  shoulder_lift_joint: -1.95869
-  elbow_joint: -2.20702
-  wrist_1_joint: -2.28526
-  wrist_2_joint: -0.39837
-  wrist_3_joint: -0.54522
-  j_index_fle: 0.80000
-  j_thumb_fle: 0.40000
-  j_mrl_fle: 0.80000
+  # shoulder_pan_joint: 0.45572
+  # shoulder_lift_joint: -1.95869
+  # elbow_joint: -2.20702
+  # wrist_1_joint: -2.28526
+  # wrist_2_joint: -0.39837
+  # wrist_3_joint: -0.54522
+  # j_index_fle: 0.80000
+  # j_thumb_fle: 0.40000
+  # j_mrl_fle: 0.80000
+
+  # shoulder_pan_joint: 0.403926819562912
+  # shoulder_lift_joint: -1.970231835042135
+  # elbow_joint: -2.012234036122457
+  # wrist_1_joint: -2.667946163808004
+  # wrist_2_joint: -1.537635628377096
+  # wrist_3_joint: 1.8020844459533691
+  # j_index_fle: 0.0099999997764825
+  # j_thumb_fle: 0.1300000008195638
+  # j_mrl_fle: 0.2600000109523535
+
+  shoulder_pan_joint: 0.32599031925420574
+  shoulder_lift_joint: -1.970543026908013
+  elbow_joint: -1.9144049882766125
+  wrist_1_joint: -2.848019123089594
+  wrist_2_joint: -1.728188276283317
+  wrist_3_joint: 1.6409232616610439
+  j_index_fle: 0.0
+  j_thumb_fle: 0.28790932893753046
+  j_mrl_fle: 0.6335764527320864
 
 right:
   
@@ -28,12 +48,19 @@ right:
   # wrist_2_joint:        0.9512651
   # wrist_3_joint:        0.0
 
-  shoulder_pan_joint: -0.78030
-  shoulder_lift_joint: -1.18167
-  elbow_joint: 1.87270
-  wrist_1_joint: -0.60458
-  wrist_2_joint: 0.80791
-  wrist_3_joint: 0.06690
-  j_index_fle: 0.38999
-  j_thumb_fle: 0.18999
-  j_mrl_fle: 0.38999
+  # shoulder_pan_joint: -0.78030
+  # shoulder_lift_joint: -1.18167
+  # elbow_joint: 1.87270
+  # wrist_1_joint: -0.60458
+  # wrist_2_joint: 0.80791
+  # wrist_3_joint: 0.06690
+  # j_index_fle: 0.38999
+  # j_thumb_fle: 0.18999
+  # j_mrl_fle: 0.38999
+
+  shoulder_pan_joint: 0.0
+  shoulder_lift_joint: -1.5708
+  elbow_joint: 0.0
+  wrist_1_joint: -1.5708
+  wrist_2_joint: 0.0
+  wrist_3_joint: 0.0

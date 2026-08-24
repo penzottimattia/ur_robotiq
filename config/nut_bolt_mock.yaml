@@ -1,0 +1,65 @@
+# Example mock configuration: starts static camera TF, mocked detected objects,
+# spawn markers from the mocked topics, and transformers.
+
+rviz:
+  config: ''
+
+static_camera_tf:
+  enabled: true
+
+mocks:
+
+  - name: bolt_mock
+    frame: left_tool0
+    target_frame: left_tool0
+    rate: 5.0
+    offset_xyz: [-0.043, 0.019, 0.169]
+    offset_quat: [0.297, -0.447, -0.568, 0.624]
+    output_topic: /object_pose/bolt
+    gt_topic: /object_pose/bolt_gt
+
+  - name: nut_mock
+    frame: world
+    target_frame: world
+    rate: 5.0
+    offset_xyz: [0.761, 0.034, -0.081]
+    offset_quat: [-0.366, 0.930, 0.013, 0.008]
+    output_topic: /object_pose/nut
+    gt_topic: /object_pose/nut_gt
+
+objects:
+
+  - name: black_nut_avg
+    mesh: /ws/src/ur_robotiq/object/black_nut/black_nut.obj
+    pose_topic: /object_detection/black_nut
+    frame: world
+    scale: 1.0
+
+  - name: black_bolt_avg
+    mesh: /ws/src/ur_robotiq/object/black_bolt/black_bolt.obj
+    pose_topic: /object_detection/black_bolt
+    frame: world
+    scale: 1.0
+
+  - name: black_nut_est
+    mesh: /ws/src/ur_robotiq/object/black_nut/black_nut.obj
+    pose_topic: /ll_asset_publisher_pose
+    frame: world
+    scale: 1.0
+
+  - name: black_bolt_est
+    mesh: /ws/src/ur_robotiq/object/black_bolt/black_bolt.obj
+    pose_topic: /rr_asset_publisher_pose
+    frame: world
+    scale: 1.0
+
+transforms:
+  - input_topic: /object_pose/nut
+    output_topic: /object_detection/black_nut
+    target_frame: world
+    publish_rate: 2.0
+
+  - input_topic: /object_pose/bolt
+    output_topic: /object_detection/black_bolt
+    target_frame: world
+    publish_rate: 2.0
