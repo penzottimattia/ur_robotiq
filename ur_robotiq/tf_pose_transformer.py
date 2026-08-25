@@ -34,6 +34,7 @@ class TFPoseTransformer(Node):
         self.declare_parameter('output_topic', '/object_pose_world')
         self.declare_parameter('target_frame', 'world')
         self.declare_parameter('average_count', 1)
+        self.declare_parameter('offset_xyz', [0.0, 0.0, 0.0])
 
         input_topic = self.get_parameter('input_topic').value
         output_topic = self.get_parameter('output_topic').value
@@ -49,6 +50,12 @@ class TFPoseTransformer(Node):
             PoseStamped, input_topic, self.pose_callback, 10
         )
         self.pose_batch = []
+
+        self.offset_xyz = self.get_parameter('offset_xyz').value
+        if len(self.offset_xyz) != 3:
+            raise ValueError(
+                f'offset_xyz must be a list of 3 floats, got {self.offset_xyz!r}'
+            )
 
         self.get_logger().info(
             f'Transforming {input_topic} to {self.target_frame} using the '
@@ -92,9 +99,9 @@ class TFPoseTransformer(Node):
         output.header.stamp = self.get_clock().now().to_msg()
 
         count = float(len(poses))
-        output.pose.position.x = sum(p.pose.position.x for p in poses) / count
-        output.pose.position.y = sum(p.pose.position.y for p in poses) / count
-        output.pose.position.z = sum(p.pose.position.z for p in poses) / count
+        output.pose.position.x = sum(p.pose.position.x for p in poses) / count + self.offset_xyz[0]
+        output.pose.position.y = sum(p.pose.position.y for p in poses) / count + self.offset_xyz[1]
+        output.pose.position.z = sum(p.pose.position.z for p in poses) / count + self.offset_xyz[2]
 
         # Hemisphere-align quaternions before normalized component averaging
         # so q and -q do not cancel even though they represent the same pose.

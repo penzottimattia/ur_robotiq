@@ -1,0 +1,46 @@
+# Example configuration for generic launch that starts camera TF, spawn markers, and transformers
+# - objects: list of meshes to spawn as visualization markers
+# - transforms: list of input/output topic mappings for tf_pose_transformer
+# - rviz: optional rviz configuration file path
+
+rviz:
+  config: ''
+
+static_camera_tf:
+  enabled: true
+
+objects:
+  - name: blue_pin
+    mesh: /ws/src/ur_robotiq/object/blue_pin/blue_pin.obj
+    pose_topic: /object_pose_fused/blue_bar
+    frame: robotcam_color_optical_frame
+    child_frame: blue_pin
+
+  - name: white_holder
+    mesh: /ws/src/ur_robotiq/object/white_holder/white_holder.obj
+    pose_topic: /object_pose_fused/white_holder
+    frame: robotcam_color_optical_frame
+    child_frame: white_holder
+
+  - name: blue_pin_est
+    mesh: /ws/src/ur_robotiq/object/blue_pin/blue_pin.obj
+    pose_topic: /rr_asset_publisher_pose
+    frame: world
+    child_frame: bolt_est
+
+  - name: white_holder_est
+    mesh: /ws/src/ur_robotiq/object/white_holder/white_holder.obj
+    pose_topic: /ll_asset_publisher_pose
+    frame: world
+    child_frame: nut_est
+
+transforms:
+  - input_topic: /object_pose_fused/blue_bar
+    output_topic: /object_detection/blue_pin
+    target_frame: world
+    offset_xyz: [0.001, 0.004, 0.0]
+
+  - input_topic: /object_pose_fused/white_holder
+    output_topic: /object_detection/white_holder
+    target_frame: world
+    

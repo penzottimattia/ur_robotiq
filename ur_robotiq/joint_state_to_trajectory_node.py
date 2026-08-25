@@ -129,7 +129,7 @@ class JointStateToTrajectoryNode(Node):
             return joint_name[len(self.tf_prefix):]
         return joint_name
 
-    def _resolve_joint_name(self, configured_name: str, msg_names, warn=True):
+    def _resolve_joint_name(self, configured_name: str, msg_names, warn=False):
         msg_name_set = set(msg_names)
         candidates = [
             configured_name,
