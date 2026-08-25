@@ -44,6 +44,7 @@ setup(
             'gello_publisher = ur_robotiq.gello_publisher:main',
             'cartesian_stitcher_node = ur_robotiq.cartesian_stitcher_node:main',
             'vive_joy_node = ur_robotiq.vive_joy_node:main',
+            'visual_feedback_insertion = ur_robotiq.visual_feedback_insertion:main',
         ],
     },
 )

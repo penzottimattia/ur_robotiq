@@ -120,6 +120,7 @@ def _launch_from_config(context, *args, **kwargs):
             'output_topic': t.get('output_topic', '/object_pose_world'),
             'target_frame': t.get('target_frame', 'world'),
             'average_count': int(t.get('average_count', 1)),
+            'offset_xyz': t.get('offset_xyz', [0.0, 0.0, 0.0]),
         }]
         nodes.append(Node(
             package='ur_robotiq',
