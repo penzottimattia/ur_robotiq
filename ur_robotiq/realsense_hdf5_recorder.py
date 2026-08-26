@@ -11,7 +11,10 @@ ROS parameters:
 
 Services:
   /start_recording  std_srvs/srv/Trigger
+  /pause_recording  std_srvs/srv/Trigger
+  /resume_recording std_srvs/srv/Trigger
   /stop_recording   std_srvs/srv/Trigger
+  /discard_last_recording std_srvs/srv/Trigger
 
 The node keeps one HDF5 dataset file. Each start/stop cycle creates one new demo
 under /demos/demo_NNNNNN. Cameras stream continuously, but frames are written only
@@ -53,13 +56,15 @@ class RealSenseHdf5Recorder(Node):
         self.output_file = Path(
             os.path.expanduser(str(self.get_parameter('output_file').value))
         ).resolve()
-        compression_param = str(self.get_parameter('compression').value).lower()
+        compression_param = str(
+            self.get_parameter('compression').value).lower()
         self.compression: Optional[str] = (
             None if compression_param in ('', 'none') else compression_param
         )
 
         if not self.serials:
-            raise RuntimeError("Parameter 'serials' must contain at least one serial")
+            raise RuntimeError(
+                "Parameter 'serials' must contain at least one serial")
         if self.width <= 0 or self.height <= 0 or self.fps <= 0:
             raise RuntimeError('width, height, and fps must be positive')
         if self.compression not in (None, 'lzf', 'gzip'):
@@ -72,6 +77,7 @@ class RealSenseHdf5Recorder(Node):
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
         self._recording = False
+        self._paused = False
         self._file: Optional[h5py.File] = None
         self._datasets: Dict[str, Dict[str, h5py.Dataset]] = {}
         self._demo_name: Optional[str] = None
@@ -80,7 +86,11 @@ class RealSenseHdf5Recorder(Node):
         self._start_cameras()
 
         self.create_service(Trigger, 'start_recording', self._on_start)
+        self.create_service(Trigger, 'pause_recording', self._on_pause)
+        self.create_service(Trigger, 'resume_recording', self._on_resume)
         self.create_service(Trigger, 'stop_recording', self._on_stop)
+        self.create_service(
+            Trigger, 'discard_last_recording', self._on_discard_last)
 
         self._capture_thread = threading.Thread(
             target=self._capture_loop,
@@ -139,6 +149,9 @@ class RealSenseHdf5Recorder(Node):
             h5.attrs['serials'] = np.asarray(
                 self.serials, dtype=h5py.string_dtype()
             )
+            h5.attrs['demo_saved_count'] = 0
+            h5.attrs['demo_discarded_count'] = 0
+            h5.attrs['demo_total_count'] = 0
             h5.require_group('demos')
             h5.flush()
         else:
@@ -165,7 +178,18 @@ class RealSenseHdf5Recorder(Node):
                     f'requested={self.serials}'
                 )
             h5.require_group('demos')
+            h5.attrs.setdefault('demo_saved_count', 0)
+            h5.attrs.setdefault('demo_discarded_count', 0)
+            h5.attrs.setdefault('demo_total_count',
+                                int(h5.attrs['demo_saved_count']) +
+                                int(h5.attrs['demo_discarded_count']))
         return h5
+
+    @staticmethod
+    def _sync_demo_metadata(h5: h5py.File) -> None:
+        h5.attrs['demo_total_count'] = int(h5.attrs['demo_saved_count']) + int(
+            h5.attrs['demo_discarded_count']
+        )
 
     @staticmethod
     def _next_demo_name(demos_group: h5py.Group) -> str:
@@ -178,13 +202,27 @@ class RealSenseHdf5Recorder(Node):
                     pass
         return f'demo_{max(indices, default=-1) + 1:06d}'
 
+    @staticmethod
+    def _last_demo_name(demos_group: h5py.Group) -> Optional[str]:
+        indices = []
+        for name in demos_group.keys():
+            if name.startswith('demo_'):
+                try:
+                    indices.append(int(name[5:]))
+                except ValueError:
+                    pass
+        if not indices:
+            return None
+        return f'demo_{max(indices):06d}'
+
     def _create_demo(self) -> str:
         h5 = self._open_dataset_file()
         try:
             demos_group = h5['demos']
             demo_name = self._next_demo_name(demos_group)
             demo_group = demos_group.create_group(demo_name)
-            demo_group.attrs['created_utc'] = datetime.now(timezone.utc).isoformat()
+            demo_group.attrs['created_utc'] = datetime.now(
+                timezone.utc).isoformat()
             demo_group.attrs['complete'] = False
 
             datasets: Dict[str, Dict[str, h5py.Dataset]] = {}
@@ -220,6 +258,7 @@ class RealSenseHdf5Recorder(Node):
             self._datasets = datasets
             self._demo_name = demo_name
             self._recording = True
+            self._paused = False
             return demo_name
         except Exception:
             h5.close()
@@ -264,7 +303,7 @@ class RealSenseHdf5Recorder(Node):
 
                     # HDF5 access and start/stop transitions are serialized here.
                     with self._lock:
-                        if self._recording and self._file is not None:
+                        if self._recording and not self._paused and self._file is not None:
                             self._write_frame(
                                 serial,
                                 rgb,
@@ -294,12 +333,49 @@ class RealSenseHdf5Recorder(Node):
                 demo_name = self._create_demo()
                 response.success = True
                 response.message = f'{self.output_file}:/demos/{demo_name}'
-                self.get_logger().info(f'Recording started: {response.message}')
+                self.get_logger().info(
+                    f'Recording started: {response.message}')
             except Exception as exc:
                 self._close_demo()
                 response.success = False
                 response.message = f'Could not start recording: {exc}'
                 self.get_logger().error(response.message)
+        return response
+
+    def _on_pause(self, request: Trigger.Request, response: Trigger.Response):
+        del request
+        with self._lock:
+            if not self._recording:
+                response.success = False
+                response.message = 'Not recording'
+                return response
+            if self._paused:
+                response.success = False
+                response.message = f'Already paused: {self._demo_name}'
+                return response
+
+            self._paused = True
+            response.success = True
+            response.message = f'Paused recording: {self._demo_name}'
+            self.get_logger().info(response.message)
+        return response
+
+    def _on_resume(self, request: Trigger.Request, response: Trigger.Response):
+        del request
+        with self._lock:
+            if not self._recording:
+                response.success = False
+                response.message = 'Not recording'
+                return response
+            if not self._paused:
+                response.success = False
+                response.message = f'Not paused: {self._demo_name}'
+                return response
+
+            self._paused = False
+            response.success = True
+            response.message = f'Resumed recording: {self._demo_name}'
+            self.get_logger().info(response.message)
         return response
 
     def _on_stop(self, request: Trigger.Request, response: Trigger.Response):
@@ -323,6 +399,10 @@ class RealSenseHdf5Recorder(Node):
                     timezone.utc
                 ).isoformat()
                 demo_group.attrs['complete'] = True
+                self._file.attrs['demo_saved_count'] = int(
+                    self._file.attrs.get('demo_saved_count', 0)
+                ) + 1
+                self._sync_demo_metadata(self._file)
                 self._file.flush()
                 self._close_demo()
                 response.success = True
@@ -337,8 +417,41 @@ class RealSenseHdf5Recorder(Node):
                 self.get_logger().error(response.message)
         return response
 
+    def _on_discard_last(self, request: Trigger.Request, response: Trigger.Response):
+        del request
+        with self._lock:
+            if self._recording:
+                response.success = False
+                response.message = 'Stop recording before discarding the last demo'
+                return response
+
+            h5 = self._open_dataset_file()
+            try:
+                demos_group = h5['demos']
+                last_demo_name = self._last_demo_name(demos_group)
+                if last_demo_name is None:
+                    response.success = False
+                    response.message = 'No recorded demos to discard'
+                    return response
+
+                del demos_group[last_demo_name]
+                h5.attrs['demo_discarded_count'] = int(
+                    h5.attrs.get('demo_discarded_count', 0)
+                ) + 1
+                self._sync_demo_metadata(h5)
+                h5.flush()
+                response.success = True
+                response.message = (
+                    f'Discarded {self.output_file}:/demos/{last_demo_name}'
+                )
+                self.get_logger().info(response.message)
+            finally:
+                h5.close()
+        return response
+
     def _close_demo(self) -> None:
         self._recording = False
+        self._paused = False
         if self._file is not None:
             try:
                 self._file.close()
@@ -353,7 +466,8 @@ class RealSenseHdf5Recorder(Node):
             try:
                 pipeline.stop()
             except Exception as exc:
-                self.get_logger().warning(f'Could not stop camera {serial}: {exc}')
+                self.get_logger().warning(
+                    f'Could not stop camera {serial}: {exc}')
         self._pipelines.clear()
 
     def close(self) -> None:

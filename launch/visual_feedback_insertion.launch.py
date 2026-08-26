@@ -12,6 +12,7 @@ def generate_launch_description():
         DeclareLaunchArgument('controlled_frame', default_value='right_dorsum_link'),
         DeclareLaunchArgument('command_topic', default_value='/right_cartesian_controller/target_frame'),
         DeclareLaunchArgument('insertion_depth', default_value='0.030'),
+        DeclareLaunchArgument('orientation_jitter', default_value='0.0'),
         DeclareLaunchArgument('dry_run', default_value='true'),
     ]
     node = Node(
@@ -26,6 +27,7 @@ def generate_launch_description():
             'controlled_frame': LaunchConfiguration('controlled_frame'),
             'command_topic': LaunchConfiguration('command_topic'),
             'insertion_depth': LaunchConfiguration('insertion_depth'),
+            'orientation_jitter': LaunchConfiguration('orientation_jitter'),
             'dry_run': LaunchConfiguration('dry_run'),
         }],
     )

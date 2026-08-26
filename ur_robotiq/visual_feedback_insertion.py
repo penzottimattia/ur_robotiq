@@ -10,15 +10,20 @@ Operation is deliberately disabled until the ``start`` service is called.
 """
 
 import math
+import random
+import time
 from enum import Enum, auto
+import threading
 
 import rclpy
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import PoseStamped, Quaternion
+from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.duration import Duration
 from rclpy.node import Node
 from rclpy.time import Time
 from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
+from tf_transformations import quaternion_from_euler, quaternion_multiply
 
 
 class Phase(Enum):
@@ -46,6 +51,7 @@ class VisualFeedbackInsertion(Node):
         self.declare_parameter('insert_gain', 0.25)
         self.declare_parameter('max_initial_lateral_error', 0.10)
         self.declare_parameter('transform_timeout', 0.1)
+        self.declare_parameter('orientation_jitter', 0.0)
         self.declare_parameter('dry_run', True)
 
         self.world = str(self.get_parameter('world_frame').value)
@@ -55,12 +61,25 @@ class VisualFeedbackInsertion(Node):
         topic = str(self.get_parameter('command_topic').value)
         rate = max(1.0, float(self.get_parameter('rate_hz').value))
 
+        self.callback_group = ReentrantCallbackGroup()
+        self._state_condition = threading.Condition()
+        self._execute_active = False
+        self.target_orientation = None
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.publisher = self.create_publisher(PoseStamped, topic, 1)
-        self.start_service = self.create_service(Trigger, '~/start', self._start)
-        self.stop_service = self.create_service(Trigger, '~/stop', self._stop)
-        self.timer = self.create_timer(1.0 / rate, self._update)
+        self.start_service = self.create_service(
+            Trigger, '~/start', self._start, callback_group=self.callback_group
+        )
+        self.execute_service = self.create_service(
+            Trigger, '~/execute', self._execute, callback_group=self.callback_group
+        )
+        self.stop_service = self.create_service(
+            Trigger, '~/stop', self._stop, callback_group=self.callback_group
+        )
+        self.timer = self.create_timer(
+            1.0 / rate, self._update, callback_group=self.callback_group
+        )
 
         self.enabled = False
         self.phase = Phase.ALIGN
@@ -72,14 +91,81 @@ class VisualFeedbackInsertion(Node):
         )
 
     def _start(self, _request, response):
+        try:
+            world_to_control = self._lookup(self.world, self.controlled)
+            target_orientation = world_to_control.transform.rotation
+            jitter_std = float(self.get_parameter('orientation_jitter').value)
+            if jitter_std > 0.0:
+                jitter = quaternion_from_euler(
+                    random.gauss(0.0, jitter_std),
+                    random.gauss(0.0, jitter_std),
+                    random.gauss(0.0, jitter_std),
+                )
+                target_orientation = quaternion_multiply(
+                    (
+                        target_orientation.x,
+                        target_orientation.y,
+                        target_orientation.z,
+                        target_orientation.w,
+                    ),
+                    jitter,
+                )
+                target_orientation = Quaternion(
+                    x=target_orientation[0],
+                    y=target_orientation[1],
+                    z=target_orientation[2],
+                    w=target_orientation[3],
+                )
+        except TransformException as exc:
+            self.get_logger().warning(
+                'Start orientation unavailable; start rejected: %s' % exc
+            )
+            response.success = False
+            response.message = 'Visual-feedback insertion start failed: target orientation unavailable.'
+            return response
+
+        self.target_orientation = target_orientation
         self.phase = Phase.ALIGN
         self.enabled = True
         response.success = True
         response.message = 'Visual-feedback insertion started.'
         return response
 
+    def _execute(self, _request, response):
+        with self._state_condition:
+            self._execute_active = True
+
+        try:
+            start_response = Trigger.Response()
+            start_response = self._start(_request, start_response)
+            if not start_response.success:
+                response.success = False
+                response.message = start_response.message
+                return response
+
+            while self.enabled:
+                if self.phase == Phase.COMPLETE:
+                    break
+                time.sleep(0.01)
+        finally:
+            with self._state_condition:
+                self._execute_active = False
+                self._state_condition.notify_all()
+
+        if self.phase == Phase.COMPLETE:
+            response.success = True
+            response.message = 'Visual-feedback insertion completed.'
+        else:
+            response.success = False
+            response.message = 'Visual-feedback insertion aborted before completion.'
+        return response
+
     def _stop(self, _request, response):
         self.enabled = False
+        with self._state_condition:
+            while self._execute_active:
+                self._state_condition.wait(timeout=0.1)
+        self.target_orientation = None
         response.success = True
         response.message = 'Insertion stopped; no further targets will be published.'
         return response
@@ -171,14 +257,16 @@ class VisualFeedbackInsertion(Node):
         correction_world = self._rotate(world_to_ref.transform.rotation, correction_ref)
 
         current = world_to_control.transform
+        if self.target_orientation is None:
+            return
         target = PoseStamped()
         target.header.stamp = self.get_clock().now().to_msg()
         target.header.frame_id = self.world
         target.pose.position.x = current.translation.x + correction_world[0]
         target.pose.position.y = current.translation.y + correction_world[1]
         target.pose.position.z = current.translation.z + correction_world[2]
-        # Translation only: preserve the controlled frame's current orientation exactly.
-        target.pose.orientation = current.rotation
+        # Translation only: preserve the fixed target orientation captured at start.
+        target.pose.orientation = self.target_orientation
 
         self._status(
             '%s: lateral=%.4f m, object_z=%.4f m, step=(%.4f, %.4f, %.4f) m'
@@ -191,8 +279,10 @@ class VisualFeedbackInsertion(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = VisualFeedbackInsertion()
+    executor = rclpy.executors.MultiThreadedExecutor(num_threads=2)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
