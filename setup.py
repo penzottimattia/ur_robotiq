@@ -45,6 +45,7 @@ setup(
             'cartesian_stitcher_node = ur_robotiq.cartesian_stitcher_node:main',
             'vive_joy_node = ur_robotiq.vive_joy_node:main',
             'visual_feedback_insertion = ur_robotiq.visual_feedback_insertion:main',
+            'realsense_hdf5_recorder = ur_robotiq.realsense_hdf5_recorder:main',
         ],
     },
 )
