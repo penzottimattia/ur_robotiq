@@ -95,11 +95,12 @@ class VisualFeedbackInsertion(Node):
             world_to_control = self._lookup(self.world, self.controlled)
             target_orientation = world_to_control.transform.rotation
             jitter_std = float(self.get_parameter('orientation_jitter').value)
+            jitter_axis = random.choice((0.0, 1.0))
             if jitter_std > 0.0:
                 jitter = quaternion_from_euler(
-                    random.gauss(0.0, jitter_std),
-                    random.gauss(0.0, jitter_std),
-                    random.gauss(0.0, jitter_std),
+                    random.choice((-1.0, 1.0)) * jitter_std if jitter_axis == 0.0 else 0.0,
+                    random.choice((-1.0, 1.0)) * jitter_std if jitter_axis == 1.0 else 0.0,
+                    0.0,
                 )
                 target_orientation = quaternion_multiply(
                     (
