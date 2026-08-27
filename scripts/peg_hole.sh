@@ -94,7 +94,7 @@ echo "Publishing the home position until alignment is confirmed..."
         ros2 topic pub --once \
             /left_cartesian_controller/target_frame \
             geometry_msgs/msg/PoseStamped \
-            "{header: {frame_id: 'world'}, pose: {position: {x: 0.758, y: 0.093, z: 0.124}, orientation: {x: 0.574, y: -0.563, z: 0.374, w: 0.462}}}" \
+            "{header: {frame_id: 'world'}, pose: {position: {x: 0.759, y: 0.090, z: 0.108}, orientation: {x: 0.574, y: -0.563, z: 0.374, w: 0.462}}}" \
             >/dev/null
 
         # Avoid restarting ros2 topic pub too aggressively.
@@ -246,23 +246,44 @@ read -r -p "Press Enter to stop recording..."
 stop_recording_if_active
 restore_cartesian_controller
 
-while true; do
-    read -r -p "Press Enter to exit or type e to discard the last recording: " exit_choice
+# ---------------------------------------------------------------------------
+# Go back to alignment and allow the user to discard the last recording if desired
+# ---------------------------------------------------------------------------
 
-    case "${exit_choice,,}" in
+echo
+echo "Returning to alignment position..."
+
+(
+    while true; do
+        ros2 topic pub --once \
+            /left_cartesian_controller/target_frame \
+            geometry_msgs/msg/PoseStamped \
+            "{header: {frame_id: 'world'}, pose: {position: {x: 0.759, y: 0.090, z: 0.108}, orientation: {x: 0.574, y: -0.563, z: 0.374, w: 0.462}}}" \
+            >/dev/null
+
+        # Avoid restarting ros2 topic pub too aggressively.
+        sleep 0.1
+    done
+) &
+
+pose_pub_pid=$!
+
+while true; do
+    read -r -p "Press Enter when alignment is confirmed, or e to discard the last recording and exit: " alignment_choice
+
+    case "${alignment_choice,,}" in
         "")
-            echo "Exiting."
+            echo "Alignment confirmed."
             break
             ;;
         e)
+            echo "Discarding the last recording..."
             ros2 service call /discard_last_recording std_srvs/srv/Trigger "{}"
             echo "Last recording discarded. Exiting."
-            break
+            exit 0
             ;;
         *)
-            echo "Invalid choice. Press Enter or type e."
+            echo "Invalid choice. Press Enter to confirm or type e to discard and exit."
             ;;
     esac
 done
-
-echo "Recording stopped and Cartesian controller restored."
