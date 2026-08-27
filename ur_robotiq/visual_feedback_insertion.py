@@ -43,12 +43,16 @@ class VisualFeedbackInsertion(Node):
         super().__init__('visual_feedback_insertion')
         self.declare_parameter('world_frame', 'world')
         self.declare_parameter('reference_frame', 'reference_object')
+        self.declare_parameter('reference_frame_1', '')
         self.declare_parameter('manipulated_frame', 'manipulated_object')
+        self.declare_parameter('manipulated_frame_1', '')
+        self.declare_parameter('depth_1', 0.0)
         self.declare_parameter('controlled_frame', 'right_dorsum_link')
         self.declare_parameter('command_topic', '/right_cartesian_controller/target_frame')
         self.declare_parameter('rate_hz', 20.0)
         self.declare_parameter('lateral_tolerance', 0.002)
         self.declare_parameter('insertion_depth', 0.030)
+        self.declare_parameter('insertion_bias', 0.0025)
         self.declare_parameter('depth_tolerance', 0.005)
         self.declare_parameter('max_step', 0.005)
         self.declare_parameter('align_gain', 0.35)
@@ -67,6 +71,7 @@ class VisualFeedbackInsertion(Node):
         self.reference = str(self.get_parameter('reference_frame').value)
         self.manipulated = str(self.get_parameter('manipulated_frame').value)
         self.controlled = str(self.get_parameter('controlled_frame').value)
+        self.stages = self._build_stages()
         topic = str(self.get_parameter('command_topic').value)
         rate = max(1.0, float(self.get_parameter('rate_hz').value))
 
@@ -91,6 +96,7 @@ class VisualFeedbackInsertion(Node):
 
         self.enabled = False
         self.phase = Phase.ALIGN
+        self.stage_index = 0
         self.rotation_aligned = False
         self.last_status = ''
         self.get_logger().warning(
@@ -98,18 +104,64 @@ class VisualFeedbackInsertion(Node):
             'clearances, collision limits, and emergency stop before enabling.'
             % self.get_parameter('dry_run').value
         )
+        if len(self.stages) > 1:
+            self.get_logger().info(
+                'Configured %d-stage insertion: %s'
+                % (len(self.stages), ', '.join(
+                    'ref=%s manip=%s depth=%.3f m' % (
+                        stage['reference_frame'],
+                        stage['manipulated_frame'],
+                        stage['depth'],
+                    ) for stage in self.stages
+                ))
+            )
+
+    def _build_stages(self):
+        default_reference = str(self.get_parameter('reference_frame').value)
+        default_frame = str(self.get_parameter('manipulated_frame').value)
+        default_depth = float(self.get_parameter('insertion_depth').value)
+
+        stage_1_reference = str(self.get_parameter('reference_frame_1').value).strip()
+        stage_1_frame = str(self.get_parameter('manipulated_frame_1').value).strip()
+        stage_1_depth = float(self.get_parameter('depth_1').value)
+        stages = [
+            {
+                'reference_frame': default_reference,
+                'manipulated_frame': default_frame,
+                'depth': default_depth,
+            }
+        ]
+
+        if stage_1_reference or stage_1_frame or stage_1_depth > 0.0:
+            if stage_1_reference and stage_1_frame and stage_1_depth > 0.0:
+                stages.append(
+                    {
+                        'reference_frame': stage_1_reference,
+                        'manipulated_frame': stage_1_frame,
+                        'depth': stage_1_depth,
+                    }
+                )
+            else:
+                self.get_logger().warning(
+                    'Ignoring partial extra stage configuration; set reference_frame_1, '
+                    'manipulated_frame_1, and depth_1 to enable the second stage.'
+                )
+
+        return stages
 
     def _start(self, _request, response):
         try:
-            self._lookup(self.world, self.reference)
-            self._lookup(self.world, self.manipulated)
             self._lookup(self.world, self.controlled)
+            for stage in self.stages:
+                self._lookup(self.world, stage['reference_frame'])
+                self._lookup(self.world, stage['manipulated_frame'])
         except TransformException as exc:
             response.success = False
             response.message = 'Start failed: required TF unavailable: %s' % exc
             return response
 
         self.phase = Phase.ALIGN
+        self.stage_index = 0
         self.rotation_aligned = False
         self.enabled = True
         response.success = True
@@ -216,10 +268,18 @@ class VisualFeedbackInsertion(Node):
     def _update(self):
         if not self.enabled:
             return
+        if self.stage_index >= len(self.stages):
+            self.enabled = False
+            return
+
+        stage = self.stages[self.stage_index]
+        stage_reference = stage['reference_frame']
+        stage_manipulated = stage['manipulated_frame']
+        stage_depth = stage['depth']
         try:
-            ref_to_obj = self._lookup(self.reference, self.manipulated)
-            world_to_ref = self._lookup(self.world, self.reference)
-            world_to_obj = self._lookup(self.world, self.manipulated)
+            ref_to_obj = self._lookup(stage_reference, stage_manipulated)
+            world_to_ref = self._lookup(self.world, stage_reference)
+            world_to_obj = self._lookup(self.world, stage_manipulated)
             world_to_control = self._lookup(self.world, self.controlled)
         except TransformException as exc:
             self.get_logger().warning('TF unavailable; command suppressed: %s' % exc)
@@ -276,30 +336,55 @@ class VisualFeedbackInsertion(Node):
         translation_enabled = (not rotation_once) or self.rotation_aligned
         correction_ref = np.zeros(3, dtype=float)
         lateral_tol = float(self.get_parameter('lateral_tolerance').value)
-        depth = float(self.get_parameter('insertion_depth').value)
         depth_tol = float(self.get_parameter('depth_tolerance').value)
 
         if translation_enabled:
             if self.phase == Phase.ALIGN and lateral <= lateral_tol:
                 self.phase = Phase.INSERT
-                self._status('Lateral alignment reached; beginning insertion along -Z reference axis.')
+                self._status(
+                    'Stage %d lateral alignment reached; beginning insertion '
+                    'along -Z reference axis.' % (self.stage_index + 1)
+                )
 
             if self.phase == Phase.ALIGN:
                 correction_ref[:2] = -float(self.get_parameter('align_gain').value) * p[:2]
             elif self.phase == Phase.INSERT:
-                z_error = -depth - p[2]
+                z_error = -stage_depth - p[2]
                 if lateral > lateral_tol:
                     self.phase = Phase.ALIGN
-                    self._status('Lateral error left tolerance; returning to alignment phase.')
+                    self._status(
+                        'Stage %d lateral error left tolerance; returning to '
+                        'alignment phase.' % (self.stage_index + 1)
+                    )
                     return
                 if abs(z_error) <= depth_tol:
-                    self.phase = Phase.COMPLETE
-                    self.enabled = False
-                    self._status('Insertion depth reached; controller stopped.')
+                    if self.stage_index + 1 < len(self.stages):
+                        self.stage_index += 1
+                        self.phase = Phase.ALIGN
+                        # In one-shot mode, preserve the completed rotation alignment
+                        # across stage changes so stage 2 starts with translation-only
+                        # feedback. Continuous mode keeps applying rotation feedback.
+                        self.rotation_aligned = rotation_once
+                        self._status(
+                            'Stage %d depth reached; switching to stage %d%s.'
+                            % (
+                                self.stage_index,
+                                self.stage_index + 1,
+                                ' with rotation alignment skipped'
+                                if rotation_once else '',
+                            )
+                        )
+                    else:
+                        self.phase = Phase.COMPLETE
+                        self.enabled = False
+                        self._status('Final insertion depth reached; controller stopped.')
                     return
                 correction_ref[2] = float(self.get_parameter('insert_gain').value) * z_error
             else:
                 return
+
+        if self.stage_index == 1:
+            correction_ref[2] -= self.get_parameter('insertion_bias').value
 
         correction_ref = self._limit_norm(
             correction_ref, float(self.get_parameter('max_step').value)
@@ -316,9 +401,9 @@ class VisualFeedbackInsertion(Node):
         target.pose.orientation = self._quaternion_message(q_target)
 
         self._status(
-            '%s: lateral=%.4f m, object_z=%.4f m, rotation_error=%.4f rad, '
+            'stage=%d %s: lateral=%.4f m, object_z=%.4f m, rotation_error=%.4f rad, '
             'step=(%.4f, %.4f, %.4f) m'
-            % (self.phase.name, lateral, p[2], rotation_error, *correction_ref)
+            % (self.stage_index + 1, self.phase.name, lateral, p[2], rotation_error, *correction_ref)
         )
         if not bool(self.get_parameter('dry_run').value):
             self.publisher.publish(target)

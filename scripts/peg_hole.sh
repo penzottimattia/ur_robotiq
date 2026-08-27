@@ -247,33 +247,13 @@ stop_recording_if_active
 restore_cartesian_controller
 
 # ---------------------------------------------------------------------------
-# Go back to alignment and allow the user to discard the last recording if desired
+# Confirm or discard the last recording
 # ---------------------------------------------------------------------------
 
-# echo
-# echo "Returning to alignment position..."
-
-# (
-#     while true; do
-#         ros2 topic pub --once \
-#             /left_cartesian_controller/target_frame \
-#             geometry_msgs/msg/PoseStamped \
-#             "{header: {frame_id: 'world'}, pose: {position: {x: 0.759, y: 0.090, z: 0.118}, orientation: {x: 0.574, y: -0.563, z: 0.374, w: 0.462}}}" \
-#             >/dev/null
-
-#         # Avoid restarting ros2 topic pub too aggressively.
-#         sleep 0.1
-#     done
-# ) &
-
-# pose_pub_pid=$!
-
-# do it manually for now, since the alignment position is not exactly the same as the home position
-
 while true; do
-    read -r -p "Press Enter when alignment is confirmed, or e to discard the last recording and exit: " alignment_choice
+    read -r -p "Press Enter to confirm, or e to discard the last recording and exit: " confirm_choice
 
-    case "${alignment_choice,,}" in
+    case "${confirm_choice,,}" in
         "")
             echo "Alignment confirmed."
             break
