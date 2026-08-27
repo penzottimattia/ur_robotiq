@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-"""Translation-only visual-feedback insertion controller.
+"""Visual-feedback insertion controller with shortest-path Z-axis alignment.
 
-The node reads two TF frames:
-* reference_frame: insertion fixture / hole frame (its +Z is the insertion axis)
-* manipulated_frame: frame attached to the object being inserted
-
-It commands translation only. The controlled frame orientation is copied unchanged.
-Operation is deliberately disabled until the ``start`` service is called.
+The manipulated frame's Z axis is aligned to the reference frame's Z axis by
+applying the shortest spatial rotation to the controlled frame, treating
+opposite Z directions as already axis-aligned. Translation is computed from
+the manipulated frame pose expressed in the reference frame.
+Operation is disabled until the start or execute service is called.
 """
 
-import math
-import random
+import threading
 import time
 from enum import Enum, auto
-import threading
 
+import numpy as np
 import rclpy
 from geometry_msgs.msg import PoseStamped, Quaternion
 from rclpy.callback_groups import ReentrantCallbackGroup
@@ -23,7 +21,13 @@ from rclpy.node import Node
 from rclpy.time import Time
 from std_srvs.srv import Trigger
 from tf2_ros import Buffer, TransformException, TransformListener
-from tf_transformations import quaternion_from_euler, quaternion_multiply
+from tf_transformations import (
+    euler_matrix,
+    quaternion_about_axis,
+    quaternion_from_matrix,
+    quaternion_matrix,
+    quaternion_multiply,
+)
 
 
 class Phase(Enum):
@@ -33,7 +37,7 @@ class Phase(Enum):
 
 
 class VisualFeedbackInsertion(Node):
-    """Closed-loop, bounded, translation-only insertion controller."""
+    """Closed-loop, bounded insertion controller with Z-axis alignment."""
 
     def __init__(self):
         super().__init__('visual_feedback_insertion')
@@ -51,7 +55,12 @@ class VisualFeedbackInsertion(Node):
         self.declare_parameter('insert_gain', 0.25)
         self.declare_parameter('max_initial_lateral_error', 0.10)
         self.declare_parameter('transform_timeout', 0.1)
+        self.declare_parameter('tf_max_age', 1.0)
         self.declare_parameter('orientation_jitter', 0.0)
+        self.declare_parameter('rotation_alignment_once', True)
+        self.declare_parameter('rotation_tolerance', 0.01)
+        self.declare_parameter('rotation_gain', 0.1)
+        self.declare_parameter('max_rotation_step', 0.10)
         self.declare_parameter('dry_run', True)
 
         self.world = str(self.get_parameter('world_frame').value)
@@ -64,7 +73,6 @@ class VisualFeedbackInsertion(Node):
         self.callback_group = ReentrantCallbackGroup()
         self._state_condition = threading.Condition()
         self._execute_active = False
-        self.target_orientation = None
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
         self.publisher = self.create_publisher(PoseStamped, topic, 1)
@@ -83,6 +91,7 @@ class VisualFeedbackInsertion(Node):
 
         self.enabled = False
         self.phase = Phase.ALIGN
+        self.rotation_aligned = False
         self.last_status = ''
         self.get_logger().warning(
             'Insertion controller is DISABLED and dry_run=%s. Verify frames, axis, '
@@ -92,73 +101,42 @@ class VisualFeedbackInsertion(Node):
 
     def _start(self, _request, response):
         try:
-            world_to_control = self._lookup(self.world, self.controlled)
-            target_orientation = world_to_control.transform.rotation
-            jitter_std = float(self.get_parameter('orientation_jitter').value)
-            jitter_axis = random.choice((0.0, 1.0))
-            if jitter_std > 0.0:
-                jitter = quaternion_from_euler(
-                    random.choice((-1.0, 1.0)) * jitter_std if jitter_axis == 0.0 else 0.0,
-                    random.choice((-1.0, 1.0)) * jitter_std if jitter_axis == 1.0 else 0.0,
-                    0.0,
-                )
-                target_orientation = quaternion_multiply(
-                    (
-                        target_orientation.x,
-                        target_orientation.y,
-                        target_orientation.z,
-                        target_orientation.w,
-                    ),
-                    jitter,
-                )
-                target_orientation = Quaternion(
-                    x=target_orientation[0],
-                    y=target_orientation[1],
-                    z=target_orientation[2],
-                    w=target_orientation[3],
-                )
+            self._lookup(self.world, self.reference)
+            self._lookup(self.world, self.manipulated)
+            self._lookup(self.world, self.controlled)
         except TransformException as exc:
-            self.get_logger().warning(
-                'Start orientation unavailable; start rejected: %s' % exc
-            )
             response.success = False
-            response.message = 'Visual-feedback insertion start failed: target orientation unavailable.'
+            response.message = 'Start failed: required TF unavailable: %s' % exc
             return response
 
-        self.target_orientation = target_orientation
         self.phase = Phase.ALIGN
+        self.rotation_aligned = False
         self.enabled = True
         response.success = True
         response.message = 'Visual-feedback insertion started.'
         return response
 
-    def _execute(self, _request, response):
+    def _execute(self, request, response):
         with self._state_condition:
             self._execute_active = True
-
         try:
-            start_response = Trigger.Response()
-            start_response = self._start(_request, start_response)
+            start_response = self._start(request, Trigger.Response())
             if not start_response.success:
                 response.success = False
                 response.message = start_response.message
                 return response
-
-            while self.enabled:
-                if self.phase == Phase.COMPLETE:
-                    break
+            while self.enabled and self.phase != Phase.COMPLETE:
                 time.sleep(0.01)
         finally:
             with self._state_condition:
                 self._execute_active = False
                 self._state_condition.notify_all()
 
-        if self.phase == Phase.COMPLETE:
-            response.success = True
-            response.message = 'Visual-feedback insertion completed.'
-        else:
-            response.success = False
-            response.message = 'Visual-feedback insertion aborted before completion.'
+        response.success = self.phase == Phase.COMPLETE
+        response.message = (
+            'Visual-feedback insertion completed.' if response.success
+            else 'Visual-feedback insertion aborted before completion.'
+        )
         return response
 
     def _stop(self, _request, response):
@@ -166,7 +144,6 @@ class VisualFeedbackInsertion(Node):
         with self._state_condition:
             while self._execute_active:
                 self._state_condition.wait(timeout=0.1)
-        self.target_orientation = None
         response.success = True
         response.message = 'Insertion stopped; no further targets will be published.'
         return response
@@ -175,27 +152,61 @@ class VisualFeedbackInsertion(Node):
         timeout = Duration(seconds=float(self.get_parameter('transform_timeout').value))
         return self.tf_buffer.lookup_transform(target, source, Time(), timeout)
 
-    @staticmethod
-    def _rotate(q, v):
-        # Quaternion-vector rotation, q=(x,y,z,w), without external dependencies.
-        x, y, z, w = q.x, q.y, q.z, q.w
-        vx, vy, vz = v
-        tx = 2.0 * (y * vz - z * vy)
-        ty = 2.0 * (z * vx - x * vz)
-        tz = 2.0 * (x * vy - y * vx)
-        return (
-            vx + w * tx + (y * tz - z * ty),
-            vy + w * ty + (z * tx - x * tz),
-            vz + w * tz + (x * ty - y * tx),
+    def _transform_is_fresh(self, transform):
+        stamp = transform.header.stamp
+        if stamp.sec == 0 and stamp.nanosec == 0:
+            return True
+
+        age = self.get_clock().now().nanoseconds - (
+            int(stamp.sec) * 1_000_000_000 + int(stamp.nanosec)
         )
+        return age <= int(float(self.get_parameter('tf_max_age').value) * 1_000_000_000)
 
     @staticmethod
-    def _limit_norm(v, limit):
-        n = math.sqrt(sum(x * x for x in v))
-        if n <= limit or n == 0.0:
-            return v
-        scale = limit / n
-        return tuple(x * scale for x in v)
+    def _quaternion_array(q):
+        return np.asarray((q.x, q.y, q.z, q.w), dtype=float)
+
+    @staticmethod
+    def _quaternion_message(q):
+        q = np.asarray(q, dtype=float)
+        q /= np.linalg.norm(q)
+        return Quaternion(x=float(q[0]), y=float(q[1]), z=float(q[2]), w=float(q[3]))
+
+    @staticmethod
+    def _shortest_z_alignment(source_q, target_q):
+        """Return (axis, angle) rotating source Z onto the closest target axis."""
+        source_z = quaternion_matrix(source_q)[:3, 2]
+        target_z = quaternion_matrix(target_q)[:3, 2]
+        dot = float(np.dot(source_z, target_z))
+        if dot < 0.0:
+            target_z = -target_z
+            dot = -dot
+        dot = float(np.clip(dot, -1.0, 1.0))
+        angle = float(np.arccos(dot))
+        axis = np.cross(source_z, target_z)
+        axis_norm = float(np.linalg.norm(axis))
+
+        if axis_norm > np.finfo(float).eps:
+            axis /= axis_norm
+        else:
+            axis = np.array((1.0, 0.0, 0.0), dtype=float)
+            angle = 0.0
+        return axis, angle
+
+    @staticmethod
+    def _limit_norm(vector, limit):
+        vector = np.asarray(vector, dtype=float)
+        norm = float(np.linalg.norm(vector))
+        if norm > limit > 0.0:
+            vector *= limit / norm
+        return vector
+
+    def _jitter_quaternion(self):
+        jitter = float(self.get_parameter('orientation_jitter').value)
+        if jitter <= 0.0:
+            return np.array((0.0, 0.0, 0.0, 1.0), dtype=float)
+        roll, pitch = np.random.normal(0.0, jitter, size=2)
+        return quaternion_from_matrix(euler_matrix(float(roll), float(pitch), 0.0))
 
     def _status(self, text):
         if text != self.last_status:
@@ -206,16 +217,27 @@ class VisualFeedbackInsertion(Node):
         if not self.enabled:
             return
         try:
-            # manipulated expressed in reference gives the visual insertion error directly.
             ref_to_obj = self._lookup(self.reference, self.manipulated)
             world_to_ref = self._lookup(self.world, self.reference)
+            world_to_obj = self._lookup(self.world, self.manipulated)
             world_to_control = self._lookup(self.world, self.controlled)
         except TransformException as exc:
             self.get_logger().warning('TF unavailable; command suppressed: %s' % exc)
             return
 
-        p = ref_to_obj.transform.translation
-        lateral = math.hypot(p.x, p.y)
+        if not all(
+            self._transform_is_fresh(transform)
+            for transform in (ref_to_obj, world_to_ref, world_to_obj, world_to_control)
+        ):
+            self.get_logger().warning('TF stale; command suppressed.')
+            return
+
+        p = np.array((
+            ref_to_obj.transform.translation.x,
+            ref_to_obj.transform.translation.y,
+            ref_to_obj.transform.translation.z,
+        ), dtype=float)
+        lateral = float(np.linalg.norm(p[:2]))
         max_initial = float(self.get_parameter('max_initial_lateral_error').value)
         if lateral > max_initial:
             self.enabled = False
@@ -224,54 +246,79 @@ class VisualFeedbackInsertion(Node):
             )
             return
 
+        q_ref = self._quaternion_array(world_to_ref.transform.rotation)
+        q_obj = self._quaternion_array(world_to_obj.transform.rotation)
+        q_control = self._quaternion_array(world_to_control.transform.rotation)
+        rotation_axis, rotation_error = self._shortest_z_alignment(q_obj, q_ref)
+
+        rotation_once = bool(self.get_parameter('rotation_alignment_once').value)
+        rotation_tol = float(self.get_parameter('rotation_tolerance').value)
+        if rotation_once and not self.rotation_aligned and rotation_error <= rotation_tol:
+            self.rotation_aligned = True
+            self._status('Z-axis rotation aligned; switching to translation-only feedback.')
+
+        apply_rotation = not (rotation_once and self.rotation_aligned)
+        if apply_rotation:
+            rotation_step = min(
+                rotation_error * float(self.get_parameter('rotation_gain').value),
+                float(self.get_parameter('max_rotation_step').value),
+            )
+            q_delta = quaternion_about_axis(rotation_step, rotation_axis)
+            q_target = quaternion_multiply(q_delta, q_control)
+        else:
+            q_target = q_control
+
+        # Jitter is deliberately separate from the measured alignment rotation.
+        q_target = quaternion_multiply(q_target, self._jitter_quaternion())
+
+        # In one-shot mode, finish rotational alignment before translating. In
+        # continuous mode, translation and rotational feedback run together.
+        translation_enabled = (not rotation_once) or self.rotation_aligned
+        correction_ref = np.zeros(3, dtype=float)
         lateral_tol = float(self.get_parameter('lateral_tolerance').value)
         depth = float(self.get_parameter('insertion_depth').value)
         depth_tol = float(self.get_parameter('depth_tolerance').value)
 
-        if self.phase == Phase.ALIGN and lateral <= lateral_tol:
-            self.phase = Phase.INSERT
-            self._status('Lateral alignment reached; beginning insertion along -Z reference axis.')
+        if translation_enabled:
+            if self.phase == Phase.ALIGN and lateral <= lateral_tol:
+                self.phase = Phase.INSERT
+                self._status('Lateral alignment reached; beginning insertion along -Z reference axis.')
 
-        if self.phase == Phase.ALIGN:
-            gain = float(self.get_parameter('align_gain').value)
-            correction_ref = (-gain * p.x, -gain * p.y, 0.0)
-        elif self.phase == Phase.INSERT:
-            # Target manipulated-frame coordinate in reference is (0, 0, -depth).
-            z_error = -depth - p.z
-            if lateral > lateral_tol:
-                self.phase = Phase.ALIGN
-                self._status('Lateral error left tolerance; returning to alignment phase.')
+            if self.phase == Phase.ALIGN:
+                correction_ref[:2] = -float(self.get_parameter('align_gain').value) * p[:2]
+            elif self.phase == Phase.INSERT:
+                z_error = -depth - p[2]
+                if lateral > lateral_tol:
+                    self.phase = Phase.ALIGN
+                    self._status('Lateral error left tolerance; returning to alignment phase.')
+                    return
+                if abs(z_error) <= depth_tol:
+                    self.phase = Phase.COMPLETE
+                    self.enabled = False
+                    self._status('Insertion depth reached; controller stopped.')
+                    return
+                correction_ref[2] = float(self.get_parameter('insert_gain').value) * z_error
+            else:
                 return
-            if abs(z_error) <= depth_tol:
-                self.phase = Phase.COMPLETE
-                self.enabled = False
-                self._status('Insertion depth reached; controller stopped.')
-                return
-            gain = float(self.get_parameter('insert_gain').value)
-            correction_ref = (0.0, 0.0, gain * z_error)
-        else:
-            return
 
         correction_ref = self._limit_norm(
             correction_ref, float(self.get_parameter('max_step').value)
         )
-        correction_world = self._rotate(world_to_ref.transform.rotation, correction_ref)
-
+        correction_world = quaternion_matrix(q_ref)[:3, :3] @ correction_ref
         current = world_to_control.transform
-        if self.target_orientation is None:
-            return
+
         target = PoseStamped()
         target.header.stamp = self.get_clock().now().to_msg()
         target.header.frame_id = self.world
-        target.pose.position.x = current.translation.x + correction_world[0]
-        target.pose.position.y = current.translation.y + correction_world[1]
-        target.pose.position.z = current.translation.z + correction_world[2]
-        # Translation only: preserve the fixed target orientation captured at start.
-        target.pose.orientation = self.target_orientation
+        target.pose.position.x = current.translation.x + float(correction_world[0])
+        target.pose.position.y = current.translation.y + float(correction_world[1])
+        target.pose.position.z = current.translation.z + float(correction_world[2])
+        target.pose.orientation = self._quaternion_message(q_target)
 
         self._status(
-            '%s: lateral=%.4f m, object_z=%.4f m, step=(%.4f, %.4f, %.4f) m'
-            % (self.phase.name, lateral, p.z, *correction_ref)
+            '%s: lateral=%.4f m, object_z=%.4f m, rotation_error=%.4f rad, '
+            'step=(%.4f, %.4f, %.4f) m'
+            % (self.phase.name, lateral, p[2], rotation_error, *correction_ref)
         )
         if not bool(self.get_parameter('dry_run').value):
             self.publisher.publish(target)
