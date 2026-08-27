@@ -13,6 +13,7 @@ def generate_launch_description():
         DeclareLaunchArgument('command_topic', default_value='/right_cartesian_controller/target_frame'),
         DeclareLaunchArgument('insertion_depth', default_value='0.030'),
         DeclareLaunchArgument('orientation_jitter', default_value='0.0'),
+        DeclareLaunchArgument('rotation_alignment_once', default_value='false'),
         DeclareLaunchArgument('dry_run', default_value='true'),
     ]
     node = Node(
@@ -28,6 +29,7 @@ def generate_launch_description():
             'command_topic': LaunchConfiguration('command_topic'),
             'insertion_depth': LaunchConfiguration('insertion_depth'),
             'orientation_jitter': LaunchConfiguration('orientation_jitter'),
+            'rotation_alignment_once': LaunchConfiguration('rotation_alignment_once'),
             'dry_run': LaunchConfiguration('dry_run'),
         }],
     )
