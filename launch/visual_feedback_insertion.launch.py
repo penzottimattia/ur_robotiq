@@ -8,7 +8,10 @@ def generate_launch_description():
     args = [
         DeclareLaunchArgument('world_frame', default_value='world'),
         DeclareLaunchArgument('reference_frame', default_value='reference_object'),
+        DeclareLaunchArgument('reference_frame_1', default_value=''),
         DeclareLaunchArgument('manipulated_frame', default_value='manipulated_object'),
+        DeclareLaunchArgument('manipulated_frame_1', default_value=''),
+        DeclareLaunchArgument('depth_1', default_value='0.0'),
         DeclareLaunchArgument('controlled_frame', default_value='right_dorsum_link'),
         DeclareLaunchArgument('command_topic', default_value='/right_cartesian_controller/target_frame'),
         DeclareLaunchArgument('insertion_depth', default_value='0.030'),
@@ -24,7 +27,10 @@ def generate_launch_description():
         parameters=[{
             'world_frame': LaunchConfiguration('world_frame'),
             'reference_frame': LaunchConfiguration('reference_frame'),
+            'reference_frame_1': LaunchConfiguration('reference_frame_1'),
             'manipulated_frame': LaunchConfiguration('manipulated_frame'),
+            'manipulated_frame_1': LaunchConfiguration('manipulated_frame_1'),
+            'depth_1': LaunchConfiguration('depth_1'),
             'controlled_frame': LaunchConfiguration('controlled_frame'),
             'command_topic': LaunchConfiguration('command_topic'),
             'insertion_depth': LaunchConfiguration('insertion_depth'),

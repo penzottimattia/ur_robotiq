@@ -149,10 +149,10 @@ class RealSenseHdf5Recorder(Node):
             h5.attrs['serials'] = np.asarray(
                 self.serials, dtype=h5py.string_dtype()
             )
-            h5.attrs['demo_saved_count'] = 0
-            h5.attrs['demo_discarded_count'] = 0
-            h5.attrs['demo_total_count'] = 0
-            h5.require_group('demos')
+            demos_group = h5.require_group('demos')
+            demos_group.attrs['completed_count'] = 0
+            demos_group.attrs['discarded_count'] = 0
+            demos_group.attrs['total_count'] = 0
             h5.flush()
         else:
             expected = {
@@ -177,19 +177,36 @@ class RealSenseHdf5Recorder(Node):
                     f'Existing dataset serials={stored_serials}, '
                     f'requested={self.serials}'
                 )
-            h5.require_group('demos')
-            h5.attrs.setdefault('demo_saved_count', 0)
-            h5.attrs.setdefault('demo_discarded_count', 0)
-            h5.attrs.setdefault('demo_total_count',
-                                int(h5.attrs['demo_saved_count']) +
-                                int(h5.attrs['demo_discarded_count']))
+            demos_group = h5.require_group('demos')
+
+            # Keep aggregate demo counters on /demos, not on the file root.
+            # Migrate counters produced by older recorder versions if present.
+            completed = int(demos_group.attrs.get(
+                'completed_count', h5.attrs.get('demo_saved_count', 0)
+            ))
+            discarded = int(demos_group.attrs.get(
+                'discarded_count', h5.attrs.get('demo_discarded_count', 0)
+            ))
+            demos_group.attrs.setdefault('completed_count', completed)
+            demos_group.attrs.setdefault('discarded_count', discarded)
+            demos_group.attrs.setdefault(
+                'total_count', completed + discarded
+            )
+            for old_key in (
+                'demo_saved_count',
+                'demo_discarded_count',
+                'demo_total_count',
+            ):
+                if old_key in h5.attrs:
+                    del h5.attrs[old_key]
+            h5.flush()
         return h5
 
     @staticmethod
-    def _sync_demo_metadata(h5: h5py.File) -> None:
-        h5.attrs['demo_total_count'] = int(h5.attrs['demo_saved_count']) + int(
-            h5.attrs['demo_discarded_count']
-        )
+    def _sync_demo_metadata(demos_group: h5py.Group) -> None:
+        demos_group.attrs['total_count'] = int(
+            demos_group.attrs.get('completed_count', 0)
+        ) + int(demos_group.attrs.get('discarded_count', 0))
 
     @staticmethod
     def _next_demo_name(demos_group: h5py.Group) -> str:
@@ -399,10 +416,11 @@ class RealSenseHdf5Recorder(Node):
                     timezone.utc
                 ).isoformat()
                 demo_group.attrs['complete'] = True
-                self._file.attrs['demo_saved_count'] = int(
-                    self._file.attrs.get('demo_saved_count', 0)
+                demos_group = self._file['demos']
+                demos_group.attrs['completed_count'] = int(
+                    demos_group.attrs.get('completed_count', 0)
                 ) + 1
-                self._sync_demo_metadata(self._file)
+                self._sync_demo_metadata(demos_group)
                 self._file.flush()
                 self._close_demo()
                 response.success = True
@@ -435,10 +453,16 @@ class RealSenseHdf5Recorder(Node):
                     return response
 
                 del demos_group[last_demo_name]
-                h5.attrs['demo_discarded_count'] = int(
-                    h5.attrs.get('demo_discarded_count', 0)
+
+                # A stopped demo was previously counted as completed. Discarding
+                # reclassifies it, rather than counting the same attempt twice.
+                completed = int(demos_group.attrs.get('completed_count', 0))
+                if completed > 0:
+                    demos_group.attrs['completed_count'] = completed - 1
+                demos_group.attrs['discarded_count'] = int(
+                    demos_group.attrs.get('discarded_count', 0)
                 ) + 1
-                self._sync_demo_metadata(h5)
+                self._sync_demo_metadata(demos_group)
                 h5.flush()
                 response.success = True
                 response.message = (
