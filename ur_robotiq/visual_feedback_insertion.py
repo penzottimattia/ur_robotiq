@@ -62,7 +62,7 @@ class VisualFeedbackInsertion(Node):
         self.declare_parameter('tf_max_age', 1.0)
         self.declare_parameter('orientation_jitter', 0.0)
         self.declare_parameter('rotation_alignment_once', True)
-        self.declare_parameter('rotation_tolerance', 0.01)
+        self.declare_parameter('rotation_tolerance', 0.05)
         self.declare_parameter('rotation_gain', 0.1)
         self.declare_parameter('max_rotation_step', 0.10)
         self.declare_parameter('dry_run', True)

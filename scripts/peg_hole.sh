@@ -94,7 +94,7 @@ echo "Publishing the home position until alignment is confirmed..."
         ros2 topic pub --once \
             /left_cartesian_controller/target_frame \
             geometry_msgs/msg/PoseStamped \
-            "{header: {frame_id: 'world'}, pose: {position: {x: 0.759, y: 0.090, z: 0.118}, orientation: {x: 0.574, y: -0.563, z: 0.374, w: 0.462}}}" \
+            "{header: {frame_id: 'world'}, pose: {position: {x: 0.759, y: 0.090, z: 0.128}, orientation: {x: 0.574, y: -0.563, z: 0.374, w: 0.462}}}" \
             >/dev/null
 
         # Avoid restarting ros2 topic pub too aggressively.
