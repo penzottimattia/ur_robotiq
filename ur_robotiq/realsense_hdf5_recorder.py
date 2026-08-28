@@ -74,7 +74,10 @@ class RealSenseHdf5Recorder(Node):
 
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
 
+        # Bound lock waits so control services and shutdown cannot deadlock.
         self._lock = threading.Lock()
+        self._control_lock_timeout_s = 2.0
+        self._capture_lock_timeout_s = 0.25
         self._stop_event = threading.Event()
         self._recording = False
         self._paused = False
@@ -103,6 +106,16 @@ class RealSenseHdf5Recorder(Node):
             f'Ready: {len(self.serials)} camera(s), '
             f'{self.width}x{self.height}@{self.fps}, output={self.output_file}'
         )
+
+    def _acquire_control_lock(self, response: Trigger.Response, operation: str) -> bool:
+        acquired = self._lock.acquire(timeout=self._control_lock_timeout_s)
+        if not acquired:
+            response.success = False
+            response.message = (
+                f'Recorder busy during {operation}; no state was changed. Retry the request.'
+            )
+            self.get_logger().error(response.message)
+        return acquired
 
     def _start_cameras(self) -> None:
         available = {
@@ -319,15 +332,23 @@ class RealSenseHdf5Recorder(Node):
                     frame_number = int(color.get_frame_number())
 
                     # HDF5 access and start/stop transitions are serialized here.
-                    with self._lock:
-                        if self._recording and not self._paused and self._file is not None:
-                            self._write_frame(
-                                serial,
-                                rgb,
-                                host_ns,
-                                device_ms,
-                                frame_number,
-                            )
+                    # Dropping a frame is preferable to blocking control services.
+                    if self._lock.acquire(timeout=self._capture_lock_timeout_s):
+                        try:
+                            if self._recording and not self._paused and self._file is not None:
+                                self._write_frame(
+                                    serial,
+                                    rgb,
+                                    host_ns,
+                                    device_ms,
+                                    frame_number,
+                                )
+                        finally:
+                            self._lock.release()
+                    elif self._recording and not self._paused:
+                        self.get_logger().warning(
+                            f'Dropped frame from camera {serial}: recorder lock busy'
+                        )
                 except RuntimeError as exc:
                     if not self._stop_event.is_set():
                         self.get_logger().warning(
@@ -341,7 +362,9 @@ class RealSenseHdf5Recorder(Node):
 
     def _on_start(self, request: Trigger.Request, response: Trigger.Response):
         del request
-        with self._lock:
+        if not self._acquire_control_lock(response, 'start'):
+            return response
+        try:
             if self._recording:
                 response.success = False
                 response.message = f'Already recording: {self._demo_name}'
@@ -357,11 +380,15 @@ class RealSenseHdf5Recorder(Node):
                 response.success = False
                 response.message = f'Could not start recording: {exc}'
                 self.get_logger().error(response.message)
+        finally:
+            self._lock.release()
         return response
 
     def _on_pause(self, request: Trigger.Request, response: Trigger.Response):
         del request
-        with self._lock:
+        if not self._acquire_control_lock(response, 'pause'):
+            return response
+        try:
             if not self._recording:
                 response.success = False
                 response.message = 'Not recording'
@@ -375,11 +402,15 @@ class RealSenseHdf5Recorder(Node):
             response.success = True
             response.message = f'Paused recording: {self._demo_name}'
             self.get_logger().info(response.message)
+        finally:
+            self._lock.release()
         return response
 
     def _on_resume(self, request: Trigger.Request, response: Trigger.Response):
         del request
-        with self._lock:
+        if not self._acquire_control_lock(response, 'resume'):
+            return response
+        try:
             if not self._recording:
                 response.success = False
                 response.message = 'Not recording'
@@ -393,11 +424,15 @@ class RealSenseHdf5Recorder(Node):
             response.success = True
             response.message = f'Resumed recording: {self._demo_name}'
             self.get_logger().info(response.message)
+        finally:
+            self._lock.release()
         return response
 
     def _on_stop(self, request: Trigger.Request, response: Trigger.Response):
         del request
-        with self._lock:
+        if not self._acquire_control_lock(response, 'stop'):
+            return response
+        try:
             if not self._recording:
                 response.success = False
                 response.message = 'Not recording'
@@ -433,11 +468,15 @@ class RealSenseHdf5Recorder(Node):
                 response.success = False
                 response.message = f'Error while closing {demo_name}: {exc}'
                 self.get_logger().error(response.message)
+        finally:
+            self._lock.release()
         return response
 
     def _on_discard_last(self, request: Trigger.Request, response: Trigger.Response):
         del request
-        with self._lock:
+        if not self._acquire_control_lock(response, 'discard'):
+            return response
+        try:
             if self._recording:
                 response.success = False
                 response.message = 'Stop recording before discarding the last demo'
@@ -471,6 +510,8 @@ class RealSenseHdf5Recorder(Node):
                 self.get_logger().info(response.message)
             finally:
                 h5.close()
+        finally:
+            self._lock.release()
         return response
 
     def _close_demo(self) -> None:
@@ -496,9 +537,20 @@ class RealSenseHdf5Recorder(Node):
 
     def close(self) -> None:
         self._stop_event.set()
+        # Stop pipelines first so wait_for_frames is unblocked promptly.
+        self._stop_cameras()
         if hasattr(self, '_capture_thread'):
             self._capture_thread.join(timeout=3.0)
-        with self._lock:
+            if self._capture_thread.is_alive():
+                self.get_logger().error(
+                    'Capture thread did not stop within 3 seconds; continuing shutdown'
+                )
+        if not self._lock.acquire(timeout=self._control_lock_timeout_s):
+            self.get_logger().error(
+                'Recorder lock remained busy during shutdown; refusing to deadlock'
+            )
+            return
+        try:
             if self._recording and self._file is not None:
                 # Interrupted demos remain readable but are explicitly incomplete.
                 if self._demo_name is not None:
@@ -509,7 +561,8 @@ class RealSenseHdf5Recorder(Node):
                     ).isoformat()
                 self._file.flush()
             self._close_demo()
-        self._stop_cameras()
+        finally:
+            self._lock.release()
 
 
 def main(args=None) -> None:
