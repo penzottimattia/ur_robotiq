@@ -43,10 +43,10 @@ class VisualFeedbackInsertion(Node):
         super().__init__('visual_feedback_insertion')
         self.declare_parameter('world_frame', 'world')
         self.declare_parameter('reference_frame', 'reference_object')
-        self.declare_parameter('reference_frame_1', '')
+        self.declare_parameter('reference_frame_post', '')
         self.declare_parameter('manipulated_frame', 'manipulated_object')
-        self.declare_parameter('manipulated_frame_1', '')
-        self.declare_parameter('depth_1', 0.0)
+        self.declare_parameter('manipulated_frame_post', '')
+        self.declare_parameter('depth_post', 0.0)
         self.declare_parameter('controlled_frame', 'right_dorsum_link')
         self.declare_parameter('command_topic', '/right_cartesian_controller/target_frame')
         self.declare_parameter('rate_hz', 20.0)
@@ -87,6 +87,9 @@ class VisualFeedbackInsertion(Node):
         self.execute_service = self.create_service(
             Trigger, '~/execute', self._execute, callback_group=self.callback_group
         )
+        self.execute_post_service = self.create_service(
+            Trigger, '~/execute_post', self._execute_post, callback_group=self.callback_group
+        )
         self.stop_service = self.create_service(
             Trigger, '~/stop', self._stop, callback_group=self.callback_group
         )
@@ -97,6 +100,7 @@ class VisualFeedbackInsertion(Node):
         self.enabled = False
         self.phase = Phase.ALIGN
         self.stage_index = 0
+        self.stage_end_index = len(self.stages)
         self.rotation_aligned = False
         self.last_status = ''
         self.get_logger().warning(
@@ -121,9 +125,9 @@ class VisualFeedbackInsertion(Node):
         default_frame = str(self.get_parameter('manipulated_frame').value)
         default_depth = float(self.get_parameter('insertion_depth').value)
 
-        stage_1_reference = str(self.get_parameter('reference_frame_1').value).strip()
-        stage_1_frame = str(self.get_parameter('manipulated_frame_1').value).strip()
-        stage_1_depth = float(self.get_parameter('depth_1').value)
+        stage_post_reference = str(self.get_parameter('reference_frame_post').value).strip()
+        stage_post_frame = str(self.get_parameter('manipulated_frame_post').value).strip()
+        stage_post_depth = float(self.get_parameter('depth_post').value)
         stages = [
             {
                 'reference_frame': default_reference,
@@ -132,27 +136,31 @@ class VisualFeedbackInsertion(Node):
             }
         ]
 
-        if stage_1_reference or stage_1_frame or stage_1_depth > 0.0:
-            if stage_1_reference and stage_1_frame and stage_1_depth > 0.0:
+        if stage_post_reference or stage_post_frame or stage_post_depth > 0.0:
+            if stage_post_reference and stage_post_frame and stage_post_depth > 0.0:
                 stages.append(
                     {
-                        'reference_frame': stage_1_reference,
-                        'manipulated_frame': stage_1_frame,
-                        'depth': stage_1_depth,
+                        'reference_frame': stage_post_reference,
+                        'manipulated_frame': stage_post_frame,
+                        'depth': stage_post_depth,
                     }
                 )
             else:
                 self.get_logger().warning(
-                    'Ignoring partial extra stage configuration; set reference_frame_1, '
-                    'manipulated_frame_1, and depth_1 to enable the second stage.'
+                    'Ignoring partial extra stage configuration; set reference_frame_post, '
+                    'manipulated_frame_post, and depth_post to enable the second stage.'
                 )
 
         return stages
 
-    def _start(self, _request, response):
+    def _start_stage_range(self, start_index, end_index, response):
+        if start_index < 0 or end_index > len(self.stages) or start_index >= end_index:
+            response.success = False
+            response.message = 'Requested insertion stage is not configured.'
+            return response
         try:
             self._lookup(self.world, self.controlled)
-            for stage in self.stages:
+            for stage in self.stages[start_index:end_index]:
                 self._lookup(self.world, stage['reference_frame'])
                 self._lookup(self.world, stage['manipulated_frame'])
         except TransformException as exc:
@@ -161,18 +169,30 @@ class VisualFeedbackInsertion(Node):
             return response
 
         self.phase = Phase.ALIGN
-        self.stage_index = 0
-        self.rotation_aligned = False
+        self.stage_index = start_index
+        self.stage_end_index = end_index
+        self.rotation_aligned = start_index > 0
         self.enabled = True
         response.success = True
-        response.message = 'Visual-feedback insertion started.'
+        response.message = 'Visual-feedback insertion started for stage(s) %d through %d.' % (
+            start_index + 1, end_index
+        )
         return response
 
-    def _execute(self, request, response):
+    def _start(self, _request, response):
+        return self._start_stage_range(0, len(self.stages), response)
+
+    def _execute_stage_range(self, start_index, end_index, response):
         with self._state_condition:
+            if self._execute_active:
+                response.success = False
+                response.message = 'Another blocking insertion execution is already active.'
+                return response
             self._execute_active = True
         try:
-            start_response = self._start(request, Trigger.Response())
+            start_response = self._start_stage_range(
+                start_index, end_index, Trigger.Response()
+            )
             if not start_response.success:
                 response.success = False
                 response.message = start_response.message
@@ -190,6 +210,14 @@ class VisualFeedbackInsertion(Node):
             else 'Visual-feedback insertion aborted before completion.'
         )
         return response
+
+    def _execute(self, _request, response):
+        """Execute only the normal insertion stage."""
+        return self._execute_stage_range(0, 1, response)
+
+    def _execute_post(self, _request, response):
+        """Execute only the optional translation-only post stage."""
+        return self._execute_stage_range(1, 2, response)
 
     def _stop(self, _request, response):
         self.enabled = False
@@ -268,7 +296,7 @@ class VisualFeedbackInsertion(Node):
     def _update(self):
         if not self.enabled:
             return
-        if self.stage_index >= len(self.stages):
+        if self.stage_index >= self.stage_end_index:
             self.enabled = False
             return
 
@@ -313,11 +341,19 @@ class VisualFeedbackInsertion(Node):
 
         rotation_once = bool(self.get_parameter('rotation_alignment_once').value)
         rotation_tol = float(self.get_parameter('rotation_tolerance').value)
-        if rotation_once and not self.rotation_aligned and rotation_error <= rotation_tol:
+        post_stage = self.stage_index == 1
+        if (
+            not post_stage
+            and rotation_once
+            and not self.rotation_aligned
+            and rotation_error <= rotation_tol
+        ):
             self.rotation_aligned = True
             self._status('Z-axis rotation aligned; switching to translation-only feedback.')
 
-        apply_rotation = not (rotation_once and self.rotation_aligned)
+        # The post stage preserves the controlled frame orientation and never
+        # applies measured rotational feedback.
+        apply_rotation = not post_stage and not (rotation_once and self.rotation_aligned)
         if apply_rotation:
             rotation_step = min(
                 rotation_error * float(self.get_parameter('rotation_gain').value),
@@ -333,7 +369,7 @@ class VisualFeedbackInsertion(Node):
 
         # In one-shot mode, finish rotational alignment before translating. In
         # continuous mode, translation and rotational feedback run together.
-        translation_enabled = (not rotation_once) or self.rotation_aligned
+        translation_enabled = post_stage or (not rotation_once) or self.rotation_aligned
         correction_ref = np.zeros(3, dtype=float)
         lateral_tol = float(self.get_parameter('lateral_tolerance').value)
         depth_tol = float(self.get_parameter('depth_tolerance').value)
@@ -358,7 +394,7 @@ class VisualFeedbackInsertion(Node):
                     )
                     return
                 if abs(z_error) <= depth_tol:
-                    if self.stage_index + 1 < len(self.stages):
+                    if self.stage_index + 1 < self.stage_end_index:
                         self.stage_index += 1
                         self.phase = Phase.ALIGN
                         # In one-shot mode, preserve the completed rotation alignment

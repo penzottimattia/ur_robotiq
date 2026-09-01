@@ -5,6 +5,31 @@ source /opt/ros/humble/setup.bash
 pose_pub_pid=""
 execute_pid=""
 recording_active=false
+post_mode=false
+
+usage() {
+    echo "Usage: $0 [--post]"
+    echo "  default  Pause, switch controller, and resume recording."
+    echo "  --post   Pause, wait 1 second, resume, and run interruptible execute_post."
+}
+
+while (( $# > 0 )); do
+    case "$1" in
+        --post)
+            post_mode=true
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "Unknown argument: $1" >&2
+            usage >&2
+            exit 2
+            ;;
+    esac
+    shift
+done
 
 # ---------------------------------------------------------------------------
 # Cleanup helpers
@@ -209,33 +234,85 @@ echo "Visual-feedback insertion completed."
 ros2 service call /pause_recording std_srvs/srv/Trigger "{}"
 
 # ---------------------------------------------------------------------------
-# Model-based insertion
+# Follow-up insertion mode
 # ---------------------------------------------------------------------------
 
-while true; do
-    read -r -p "Press Enter to continue with model-based insertion, or e to stop: " continue_choice
+if [[ "$post_mode" == true ]]; then
+    echo "Post mode: waiting 1 second before resuming recording..."
+    sleep 1
+    ros2 service call /resume_recording std_srvs/srv/Trigger "{}"
 
-    case "${continue_choice,,}" in
-        "")
-            ros2 service call /resume_recording std_srvs/srv/Trigger "{}"
-            break
-            ;;
-        e)
-            stop_recording_if_active
-            restore_cartesian_controller
+    echo
+    echo "Starting visual-feedback post insertion."
+    echo "Press e to interrupt it and stop recording."
 
-            echo "Recording stopped. Exiting."
-            exit 0
-            ;;
-        *)
-            echo "Invalid choice. Press Enter or type e."
-            ;;
-    esac
-done
+    ros2 service call \
+        /visual_feedback_insertion/execute_post \
+        std_srvs/srv/Trigger "{}" &
+    execute_pid=$!
+    post_insertion_interrupted=false
 
-ros2 control switch_controllers \
-    --activate left_arm_controller \
-    --deactivate left_cartesian_controller
+    while kill -0 "$execute_pid" 2>/dev/null; do
+        if IFS= read -r -s -n 1 -t 0.1 key; then
+            case "${key,,}" in
+                e)
+                    post_insertion_interrupted=true
+                    cleanup_execute_call
+                    ros2 service call \
+                        /visual_feedback_insertion/stop \
+                        std_srvs/srv/Trigger "{}"
+                    break
+                    ;;
+            esac
+        fi
+    done
+
+    post_execute_status=0
+    if [[ -n "$execute_pid" ]]; then
+        wait "$execute_pid" || post_execute_status=$?
+        execute_pid=""
+    fi
+
+    if [[ "$post_insertion_interrupted" == true ]]; then
+        echo "Visual-feedback post insertion interrupted by the user."
+        stop_recording_if_active
+        restore_cartesian_controller
+        exit 0
+    fi
+
+    if (( post_execute_status != 0 )); then
+        echo "Visual-feedback post insertion failed with status ${post_execute_status}."
+        stop_recording_if_active
+        restore_cartesian_controller
+        exit "$post_execute_status"
+    fi
+
+    echo "Visual-feedback post insertion completed."
+else
+    while true; do
+        read -r -p "Press Enter to continue with model-based insertion, or e to stop: " continue_choice
+
+        case "${continue_choice,,}" in
+            "")
+                ros2 control switch_controllers \
+                    --activate left_arm_controller \
+                    --deactivate left_cartesian_controller
+                ros2 service call /resume_recording std_srvs/srv/Trigger "{}"
+                break
+                ;;
+            e)
+                stop_recording_if_active
+                restore_cartesian_controller
+
+                echo "Recording stopped. Exiting."
+                exit 0
+                ;;
+            *)
+                echo "Invalid choice. Press Enter or type e."
+                ;;
+        esac
+    done
+fi
 
 # ---------------------------------------------------------------------------
 # Stop recording
