@@ -82,6 +82,45 @@
 			},
 			"problemMatcher": [],
 		},
+		{
+			"label": "Task: ros2_record",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq spacenav_realsense_streaming.launch.py ee_frame:=left_dorsum_link target_topic:=/left_cartesian_controller/reference_frame serials:=\"['216322071978', '213322074048']\" fps:=30 translation_scale:=0.1 rotation_scale:=0.0 width:=320 height:=240 offset_in_tool_frame:=false"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+			"label": "Task: ros2_rviz",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && rviz2"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+			"label": "Task: ros2_rqt",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && rqt"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		}
 	],
 	"inputs": [
 		{
