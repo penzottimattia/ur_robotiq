@@ -4,6 +4,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
+from launch.conditions import IfCondition
 
 
 def _serial_list(value):
@@ -27,6 +28,7 @@ def _launch_nodes(context):
             executable='spacenav_node',
             name='spacenav_node',
             output='screen',
+            condition=IfCondition(LaunchConfiguration('spacenav_enabled')),
         ),
         Node(
             package='ur_robotiq',
@@ -42,6 +44,7 @@ def _launch_nodes(context):
                 'rotation_scale': LaunchConfiguration('rotation_scale'),
                 'offset_in_tool_frame': LaunchConfiguration('offset_in_tool_frame'),
             }],
+            condition=IfCondition(LaunchConfiguration('spacenav_enabled'))
         ),
         Node(
             package='ur_robotiq',
@@ -62,6 +65,7 @@ def _launch_nodes(context):
 
 def generate_launch_description():
     return LaunchDescription([
+        DeclareLaunchArgument('spacenav_enabled', default_value='true'),
         DeclareLaunchArgument('base_frame', default_value='world'),
         DeclareLaunchArgument('ee_frame', default_value='right_dorsum_link'),
         DeclareLaunchArgument(

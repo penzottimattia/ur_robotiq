@@ -47,6 +47,7 @@ setup(
             'visual_feedback_insertion = ur_robotiq.visual_feedback_insertion:main',
             'spacenav_cartesian_target = ur_robotiq.spacenav_cartesian_target:main',
             'realsense_compressed_publisher = ur_robotiq.realsense_compressed_publisher:main',
+            'cartesian_absolute_to_delta = ur_robotiq.cartesian_absolute_to_delta:main',
         ],
     },
 )

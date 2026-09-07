@@ -88,7 +88,7 @@
 			"command": "bash",
 			"args": [
 				"-c",
-				"source /ws/install/setup.bash && ros2 launch ur_robotiq spacenav_realsense_streaming.launch.py ee_frame:=left_dorsum_link target_topic:=/left_cartesian_controller/reference_frame serials:=\"['216322071978', '213322074048']\" fps:=30 translation_scale:=0.1 rotation_scale:=0.0 width:=320 height:=240 offset_in_tool_frame:=false"
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq spacenav_realsense_streaming.launch.py ee_frame:=left_dorsum_link target_topic:=/left_cartesian_controller/reference_frame serials:=\"['216322071978', '213322074048']\" fps:=30 translation_scale:=0.1 rotation_scale:=0.0 width:=320 height:=240 offset_in_tool_frame:=false spacenav_enabled:=${input:spacenav_enabled}"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}",
@@ -128,6 +128,16 @@
 			"type": "promptString",
 			"description": "Enter the arguments for the ur_dashboard.sh script",
 			"default": "stop play"
+		},
+		{
+			"id": "spacenav_enabled",
+			"type": "pickString",
+			"description": "Enable or disable the spacenav_node",
+			"options": [
+				"true",
+				"false"
+			],
+			"default": "false"
 		}
 	]
 }
