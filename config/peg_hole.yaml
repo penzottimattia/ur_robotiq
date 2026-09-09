@@ -12,7 +12,7 @@ static_camera_tf:
 objects:
   - name: blue_pin
     mesh: /ws/src/ur_robotiq/object/blue_pin/blue_pin.obj
-    pose_topic: /object_pose_fused/blue_bar
+    pose_topic: /object_pose_fused/red_bar
     frame: robotcam_color_optical_frame
     child_frame: blue_pin
 
@@ -35,7 +35,7 @@ objects:
     child_frame: white_holder_est
 
 transforms:
-  - input_topic: /object_pose_fused/blue_bar
+  - input_topic: /object_pose_fused/red_bar
     output_topic: /object_detection/blue_pin
     target_frame: world
     offset_xyz: [0.000, 0.004, 0.0]
