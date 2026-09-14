@@ -12,14 +12,14 @@ static_camera_tf:
 objects:
   - name: blue_pin
     mesh: /ws/src/ur_robotiq/object/blue_pin/blue_pin.obj
-    pose_topic: /object_pose_fused/red_bar
-    frame: robotcam_color_optical_frame
+    pose_topic: /object_detection/blue_pin
+    frame: world
     child_frame: blue_pin
 
   - name: white_holder
-    mesh: /ws/src/ur_robotiq/object/white_holder/white_holder.obj
-    pose_topic: /object_pose_fused/white_holder
-    frame: robotcam_color_optical_frame
+    mesh: /ws/src/ur_robotiq/object/white_cylinder/white_cylinder.obj
+    pose_topic: /object_detection/white_holder
+    frame: world
     child_frame: white_holder
 
   - name: blue_pin_est
@@ -29,7 +29,7 @@ objects:
     child_frame: blue_pin_est
 
   - name: white_holder_est
-    mesh: /ws/src/ur_robotiq/object/white_holder/white_holder.obj
+    mesh: /ws/src/ur_robotiq/object/white_cylinder/white_cylinder.obj
     pose_topic: /ll_asset_publisher_pose
     frame: world
     child_frame: white_holder_est
@@ -38,10 +38,10 @@ transforms:
   - input_topic: /object_pose_fused/red_bar
     output_topic: /object_detection/blue_pin
     target_frame: world
-    offset_xyz: [0.000, 0.004, 0.0]
+    offset_xyz: [0.0, -0.01, 0.0]
 
-  - input_topic: /object_pose_fused/white_holder
+  - input_topic: /object_pose_fused/white_cylinder
     output_topic: /object_detection/white_holder
     target_frame: world
-    offset_xyz: [0.000, 0.004, 0.0]
+    offset_xyz: [0.0, -0.01, 0.0]
     

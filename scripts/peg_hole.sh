@@ -2,21 +2,26 @@
 
 source /opt/ros/humble/setup.bash
 
-pose_pub_pid=""
+pose_pub_pids=()
 execute_pid=""
 recording_active=false
 post_mode=false
+bimanual=false
 
 usage() {
-    echo "Usage: $0 [--post]"
-    echo "  default  Pause, switch controller, and resume recording."
-    echo "  --post   Pause, wait 1 second, resume, and run interruptible execute_post."
+    echo "Usage: $0 [--post] [--bimanual]"
+    echo "  default     Pause, switch controller, and resume recording."
+    echo "  --post      Pause, wait 1 second, resume, and run interruptible execute_post."
+    echo "  --bimanual  Use both left and right arms/controllers."
 }
 
 while (( $# > 0 )); do
     case "$1" in
         --post)
             post_mode=true
+            ;;
+        --bimanual)
+            bimanual=true
             ;;
         -h|--help)
             usage
@@ -32,26 +37,53 @@ while (( $# > 0 )); do
 done
 
 # ---------------------------------------------------------------------------
+# Controller helpers
+# ---------------------------------------------------------------------------
+
+restore_cartesian_controller() {
+    if [[ "$bimanual" == true ]]; then
+        ros2 control switch_controllers \
+            --deactivate left_arm_controller right_arm_controller \
+            --activate left_cartesian_controller right_cartesian_controller
+    else
+        ros2 control switch_controllers \
+            --deactivate left_arm_controller \
+            --activate left_cartesian_controller
+    fi
+}
+
+activate_arm_controllers() {
+    if [[ "$bimanual" == true ]]; then
+        ros2 control switch_controllers \
+            --activate left_arm_controller right_arm_controller \
+            --deactivate left_cartesian_controller right_cartesian_controller
+    else
+        ros2 control switch_controllers \
+            --activate left_arm_controller \
+            --deactivate left_cartesian_controller
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Cleanup helpers
 # ---------------------------------------------------------------------------
 
 cleanup_pose_publisher() {
-    if [[ -n "$pose_pub_pid" ]] && kill -0 "$pose_pub_pid" 2>/dev/null; then
-        kill "$pose_pub_pid" 2>/dev/null
-        wait "$pose_pub_pid" 2>/dev/null
-    fi
-
-    pose_pub_pid=""
+    for pid in "${pose_pub_pids[@]}"; do
+        if kill -0 "$pid" 2>/dev/null; then
+            kill "$pid" 2>/dev/null
+            wait "$pid" 2>/dev/null
+        fi
+    done
+    pose_pub_pids=()
 }
 
 cleanup_execute_call() {
     if [[ -n "$execute_pid" ]] && kill -0 "$execute_pid" 2>/dev/null; then
         echo
         echo "Interrupting visual-feedback insertion..."
-
         kill -INT "$execute_pid" 2>/dev/null
 
-        # Give the ROS 2 process time to react to SIGINT.
         for _ in {1..30}; do
             if ! kill -0 "$execute_pid" 2>/dev/null; then
                 break
@@ -59,7 +91,6 @@ cleanup_execute_call() {
             sleep 0.1
         done
 
-        # Escalate if it did not stop.
         if kill -0 "$execute_pid" 2>/dev/null; then
             kill -TERM "$execute_pid" 2>/dev/null
         fi
@@ -68,12 +99,6 @@ cleanup_execute_call() {
     fi
 
     execute_pid=""
-}
-
-restore_cartesian_controller() {
-    ros2 control switch_controllers \
-        --deactivate left_arm_controller \
-        --activate left_cartesian_controller
 }
 
 stop_recording_if_active() {
@@ -99,9 +124,11 @@ cleanup() {
 handle_signal() {
     echo
     echo "Script interrupted."
+
     cleanup_execute_call
     stop_recording_if_active
     restore_cartesian_controller
+
     exit 130
 }
 
@@ -109,25 +136,43 @@ trap cleanup EXIT
 trap handle_signal INT TERM
 
 # ---------------------------------------------------------------------------
+# Pose publishers
+# ---------------------------------------------------------------------------
+
+start_pose_publishers() {
+    (
+        while true; do
+            ros2 topic pub --once \
+                /left_cartesian_controller/target_frame \
+                geometry_msgs/msg/PoseStamped \
+                "{header: {frame_id: 'world'}, pose: {position: {x: 0.680, y: 0.092, z: 0.222}, orientation: {x: 0.560, y: -0.580, z: 0.282, w: 0.520}}}" \
+                >/dev/null
+            sleep 0.1
+        done
+    ) &
+    pose_pub_pids+=($!)
+
+    if [[ "$bimanual" == true ]]; then
+        (
+            while true; do
+                ros2 topic pub --once \
+                    /right_cartesian_controller/target_frame \
+                    geometry_msgs/msg/PoseStamped \
+                    "{header: {frame_id: 'world'}, pose: {position: {x: 0.559, y: -0.076, z: 0.006}, orientation: {x: 0.441, y: 0.519, z: 0.540, w: 0.495}}}" \
+                    >/dev/null
+                sleep 0.1
+            done
+        ) &
+        pose_pub_pids+=($!)
+    fi
+}
+
+# ---------------------------------------------------------------------------
 # Home position and alignment
 # ---------------------------------------------------------------------------
 
 echo "Publishing the home position until alignment is confirmed..."
-
-(
-    while true; do
-        ros2 topic pub --once \
-            /left_cartesian_controller/target_frame \
-            geometry_msgs/msg/PoseStamped \
-            "{header: {frame_id: 'world'}, pose: {position: {x: 0.759, y: 0.090, z: 0.128}, orientation: {x: 0.574, y: -0.563, z: 0.374, w: 0.462}}}" \
-            >/dev/null
-
-        # Avoid restarting ros2 topic pub too aggressively.
-        sleep 0.1
-    done
-) &
-
-pose_pub_pid=$!
+start_pose_publishers
 
 while true; do
     read -r -p "Press Enter when alignment is confirmed, or e to exit: " alignment_choice
@@ -196,7 +241,6 @@ while kill -0 "$execute_pid" 2>/dev/null; do
     fi
 done
 
-# Collect the exit status if the process completed normally.
 execute_status=0
 
 if [[ -n "$execute_pid" ]]; then
@@ -206,26 +250,18 @@ fi
 
 if [[ "$visual_insertion_interrupted" == true ]]; then
     echo "Visual-feedback insertion interrupted by the user."
-
     stop_recording_if_active
     restore_cartesian_controller
-
     ros2 service call /visual_feedback_insertion/stop std_srvs/srv/Trigger "{}"
     ros2 service call /discard_last_recording std_srvs/srv/Trigger "{}"
-
-    echo "Recording stopped and Cartesian controller restored. Exiting."
     exit 0
 fi
 
 if (( execute_status != 0 )); then
     echo "Visual-feedback insertion failed with status ${execute_status}."
-
     stop_recording_if_active
     restore_cartesian_controller
-
     ros2 service call /discard_last_recording std_srvs/srv/Trigger "{}"
-
-    echo "Recording stopped and Cartesian controller restored. Exiting."
     exit "$execute_status"
 fi
 
@@ -238,8 +274,10 @@ ros2 service call /pause_recording std_srvs/srv/Trigger "{}"
 # ---------------------------------------------------------------------------
 
 if [[ "$post_mode" == true ]]; then
+
     echo "Post mode: waiting 1 second before resuming recording..."
     sleep 1
+
     ros2 service call /resume_recording std_srvs/srv/Trigger "{}"
 
     echo
@@ -249,7 +287,9 @@ if [[ "$post_mode" == true ]]; then
     ros2 service call \
         /visual_feedback_insertion/execute_post \
         std_srvs/srv/Trigger "{}" &
+
     execute_pid=$!
+
     post_insertion_interrupted=false
 
     while kill -0 "$execute_pid" 2>/dev/null; do
@@ -268,6 +308,7 @@ if [[ "$post_mode" == true ]]; then
     done
 
     post_execute_status=0
+
     if [[ -n "$execute_pid" ]]; then
         wait "$execute_pid" || post_execute_status=$?
         execute_pid=""
@@ -288,22 +329,21 @@ if [[ "$post_mode" == true ]]; then
     fi
 
     echo "Visual-feedback post insertion completed."
+
 else
+
     while true; do
         read -r -p "Press Enter to continue with model-based insertion, or e to stop: " continue_choice
 
         case "${continue_choice,,}" in
             "")
-                ros2 control switch_controllers \
-                    --activate left_arm_controller \
-                    --deactivate left_cartesian_controller
+                activate_arm_controllers
                 ros2 service call /resume_recording std_srvs/srv/Trigger "{}"
                 break
                 ;;
             e)
                 stop_recording_if_active
                 restore_cartesian_controller
-
                 echo "Recording stopped. Exiting."
                 exit 0
                 ;;
@@ -332,7 +372,7 @@ while true; do
 
     case "${confirm_choice,,}" in
         "")
-            echo "Alignment confirmed."
+            echo "Recording confirmed."
             break
             ;;
         e)
