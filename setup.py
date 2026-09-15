@@ -42,6 +42,13 @@ setup(
             'usb_camera_node = ur_robotiq.usb_camera_node:main',
             'gello_offset_node = ur_robotiq.gello_offset_node:main',
             'gello_publisher = ur_robotiq.gello_publisher:main',
+            'cartesian_stitcher_node = ur_robotiq.cartesian_stitcher_node:main',
+            'vive_joy_node = ur_robotiq.vive_joy_node:main',
+            'visual_feedback_insertion = ur_robotiq.visual_feedback_insertion:main',
+            'spacenav_cartesian_target = ur_robotiq.spacenav_cartesian_target:main',
+            'realsense_hdf5_recorder = ur_robotiq.realsense_hdf5_recorder:main',
+            'realsense_compressed_publisher = ur_robotiq.realsense_compressed_publisher:main',
+            'cartesian_absolute_to_delta = ur_robotiq.cartesian_absolute_to_delta:main',
         ],
     },
 )

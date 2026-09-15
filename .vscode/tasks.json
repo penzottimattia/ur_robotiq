@@ -1,0 +1,143 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Task: ros2_build",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && colcon build"
+			],
+			"problemMatcher": [],
+			"options": {
+				"cwd": "/ws"
+			}
+		},
+		{
+            "label": "Task: ros2_control",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py use_cartesian_stitcher:=true left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 right_mia_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTGRD1P9-if00-port0 left_mia_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTBWH3EC-if00-port0 mode:=none"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+				"env": {
+					"MY_MAGIC_NUMBER": "-0.02"
+				}
+            },
+            "problemMatcher": [],
+			"dependsOn": "Task: ros2_build"
+        },
+		{
+			"label": "Task: ros2_mia_left",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && ros2 launch mia_hand_ros2_control mia_hand_system_interface_launch.py serial_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTBWH3EC-if00-port0 controller:=group_pos_trajectory_controller joint_limits_config_file:='/ws/src/ur_robotiq/config/left_hand_joint_limits.yaml' transmission_config_file:='/ws/src/ur_robotiq/config/left_hand_transmission.yaml' rqt_joint_trajectory_controller_gui:=true"	
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+			"label": "Task: ros2_mia_right",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && ros2 launch mia_hand_ros2_control mia_hand_system_interface_launch.py serial_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTGRD1P9-if00-port0 controller:=group_pos_trajectory_controller joint_limits_config_file:='/ws/src/ur_robotiq/config/right_hand_joint_limits.yaml' transmission_config_file:='/ws/src/ur_robotiq/config/right_hand_transmission.yaml' rqt_joint_trajectory_controller_gui:=true"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+            "label": "Task: ros2_mocap",
+            "type": "shell",
+            "command": "bash",
+            "args": [
+                "-c",
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq generic_from_config.launch.py config_file:='/ws/src/ur_robotiq/config/peg_hole.yaml'"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}",
+            },
+            "problemMatcher": [],
+        },
+		{
+			"label": "Task: ros2_ur",
+			"type": "shell",
+			"command": "/ws/src/ur_robotiq/scripts/ur_dashboard.sh",
+			"args": [
+				"${input:ur_string_args}",
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+			"label": "Task: ros2_record",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq spacenav_realsense_streaming.launch.py ee_frame:=left_dorsum_link target_topic:=/left_cartesian_controller/reference_frame serials:=\"['216322071978', '213322074048']\" fps:=30 translation_scale:=0.1 rotation_scale:=0.0 width:=320 height:=240 offset_in_tool_frame:=false spacenav_enabled:=${input:spacenav_enabled}"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+			"label": "Task: ros2_rviz",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && rviz2"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+			"label": "Task: ros2_rqt",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && rqt"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		}
+	],
+	"inputs": [
+		{
+			"id": "ur_string_args",
+			"type": "promptString",
+			"description": "Enter the arguments for the ur_dashboard.sh script",
+			"default": "stop play"
+		},
+		{
+			"id": "spacenav_enabled",
+			"type": "pickString",
+			"description": "Enable or disable the spacenav_node",
+			"options": [
+				"true",
+				"false"
+			],
+			"default": "false"
+		}
+	]
+}

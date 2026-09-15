@@ -48,12 +48,15 @@ def _launch_from_config(context, *args, **kwargs):
         pose_topic = obj.get('pose_topic', '/mesh_pose')
         frame = obj.get('frame', '')
         scale = obj.get('scale', 1.0)
+        child_frame = obj.get('child_frame', '')
 
         params = [{
+            'name': obj.get('name', os.path.basename(mesh)),
             'mesh': mesh,
             'pose_topic': pose_topic,
             'frame': frame,
             'scale': float(scale),
+            'child_frame': child_frame
         }]
 
         nodes.append(Node(
@@ -76,6 +79,7 @@ def _launch_from_config(context, *args, **kwargs):
             'rot_jitter_std': float(m.get('rot_jitter_std', 0.01)),
             'offset_xyz': m.get('offset_xyz', [0.0, 0.0, 0.0]),
             'offset_rpy': m.get('offset_rpy', [0.0, 0.0, 0.0]),
+            'offset_quat': m.get('offset_quat', [0.0, 0.0, 0.0, 0.0]),
         }]
 
         nodes.append(Node(
@@ -115,6 +119,8 @@ def _launch_from_config(context, *args, **kwargs):
             'input_topic': t.get('input_topic', '/mesh_pose'),
             'output_topic': t.get('output_topic', '/object_pose_world'),
             'target_frame': t.get('target_frame', 'world'),
+            'average_count': int(t.get('average_count', 1)),
+            'offset_xyz': t.get('offset_xyz', [0.0, 0.0, 0.0]),
         }]
         nodes.append(Node(
             package='ur_robotiq',

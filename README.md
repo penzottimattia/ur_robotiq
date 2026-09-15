@@ -2,10 +2,26 @@
 
 ROS 2 Jazzy package for a bimanual setup with two UR3 manipulators and Robotiq 2F-85 grippers.
 
+### Minimal reproducible deployment
+
+```bash
+# start deployment in the backgound
+docker start ur_robotiq || (echo "Creating a new one" && docker run -dit --net host --privileged --name ur_robotiq --entrypoint bash ghcr.io/penzottimattia/ur_robotiq:gello)
+
+# edit "port" field in GELLO_CONFIGS (use arrows to move, ctrl + s to save, ctrl +x to exit)
+docker exec -it ur_robotiq nano gello_publisher.py
+
+# start the system (change robot ip addresses an customd ports as needed)
+docker exec -it ur_robotiq bash -c 'source /opt/ros/humble/ur_robotiq/setup.bash; ros2 launch ur_robotiq control_bimanual_ur3_robotiq.launch.py mode:=none use_gello:=true left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 left_custom_port:=50002 right_custom_port:=50102'
+
+# use this command to list the full set of parameters (gripper force and others)
+docker exec -it ur_robotiq bash -c 'source /opt/ros/humble/ur_robotiq/setup.bash; ros2 launch ur_robotiq control_bimanual_ur3_robotiq.launch.py -s
+```
+
 ## What this package provides
 
 - Combined bimanual URDF/Xacro model (`urdf/ur_robotiq.urdf`)
-- Robot base pose configuration (`config/robot_bases.yaml`)
+- Robot base transform configuration (`config/left_in_right.yaml`)
 - ros2_control controller configuration (`config/bimanual_controllers.yaml`)
 - Launch files to:
   - visualize the bimanual robot
@@ -36,7 +52,7 @@ source install/setup.bash
 ### 1) Visualize bimanual setup
 
 ```bash
-ros2 launch ur_robotiq view_bimanual_ur3_robotiq.launch.py
+ros2 launch ur_robotiq view_bimanual_ur_robotiq.launch.py
 ```
 
 Useful launch arguments:
@@ -46,12 +62,12 @@ Useful launch arguments:
 - `use_joint_state_gui:=true|false`
 - `left_robot_ip:=<ip>`
 - `right_robot_ip:=<ip>`
-- `base_poses_file:=<path/to/yaml>`
+- `base_poses_file:=<path/to/yaml>`  (`config/left_in_right.yaml` is the default)
 
 ### 2) Run bimanual control stack
 
 ```bash
-ros2 launch ur_robotiq control_bimanual_ur3_robotiq.launch.py
+ros2 launch ur_robotiq control_bimanual_ur_robotiq.launch.py
 ```
 
 Useful launch arguments:
@@ -65,7 +81,7 @@ Useful launch arguments:
 - `left_robot_ip:=<ip>`
 - `right_robot_ip:=<ip>`
 - `controllers_file:=<path/to/controllers.yaml>`
-- `base_poses_file:=<path/to/yaml>`
+- `base_poses_file:=<path/to/yaml>`  (`config/left_in_right.yaml` is the default)
 
 Important parameters:
 
@@ -189,10 +205,10 @@ Use the unit xacro directly and generate one calibrated URDF per calibration fil
 
 ```bash
 ros2 run ur_robotiq export_unit_assets \
-  --input-xacro /ws/src/ur_robotiq/urdf/ur3_robotiq_unit.urdf.xacro \
-  --output-dir /tmp/ur3_unit_export \
+  --input-xacro /ws/src/ur_robotiq/urdf/ur_robotiq_unit.urdf.xacro \
+  --output-dir /tmp/ur3e_unit_export \
   --output-urdf-name unit.urdf \
-  --xacro-args ur_type:=ur3 \
+  --xacro-args ur_type:=ur3e \
   --calibration-files \
     /ws/src/ur_robotiq/config/left_ur_calibration.yaml \
     /ws/src/ur_robotiq/config/right_ur_calibration.yaml \
@@ -201,9 +217,9 @@ ros2 run ur_robotiq export_unit_assets \
 
 Output layout:
 
-- `/tmp/ur3_unit_export/unit_left_ur_calibration.urdf`
-- `/tmp/ur3_unit_export/unit_right_ur_calibration.urdf`
-- `/tmp/ur3_unit_export/meshes/...` (copied visual/collision assets)
+- `/tmp/ur3e_unit_export/unit_left_ur_calibration.urdf`
+- `/tmp/ur3e_unit_export/unit_right_ur_calibration.urdf`
+- `/tmp/ur3e_unit_export/meshes/...` (copied visual/collision assets)
 
 Notes:
 
@@ -215,8 +231,8 @@ Legacy path (already expanded URDF, no per-calibration xacro generation):
 
 ```bash
 ros2 run ur_robotiq export_unit_assets \
-  --input-urdf /tmp/ur3_robotiq_unit_expanded.urdf \
-  --output-dir /tmp/ur3_unit_export \
+  --input-urdf /tmp/ur_robotiq_unit_expanded.urdf \
+  --output-dir /tmp/ur3e_unit_export \
   --output-urdf-name unit.urdf \
   --overwrite
 ```
@@ -227,7 +243,7 @@ Launch wrapper (left/right calibration in one command):
 ros2 launch ur_robotiq export_unit_assets.launch.py \
   run_left:=true \
   run_right:=true \
-  output_dir:=/tmp/ur3_unit_export
+  output_dir:=/tmp/ur3e_unit_export
 ```
 
 ## Notes
@@ -238,3 +254,26 @@ ros2 launch ur_robotiq export_unit_assets.launch.py \
 ## License
 
 This project is licensed under the Apache License 2.0. See `LICENSE` for details.
+
+# Setup the UR Teach Pendant
+
+Three steps are required to prepare the UR robots to work seamlessly with this package, most of which are well documented from several sources.
+
+  1. [External Control](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/robot_setup.html)
+  2. [Networking](https://docs.universal-robots.com/Universal_Robots_ROS2_Documentation/doc/ur_client_library/doc/setup/network_setup.html) 
+  3. [Tool Communication](https://github.com/UniversalRobots/Universal_Robots_ToolComm_Forwarder_URCap)
+
+> [!CAUTION]
+> In the `External Control` options, confirm that the custom port differs between the two robots.
+
+Since two robots are used with two Robotiq Grippers, you'll need a little more effort on the third step. Once the `ToolComm Forwarder` is installed, choose one robot and connect from your pc through [Shell Access](https://docs.universal-robots.com/tutorials/urscript-tutorials/ssh.html).
+
+```bash
+# You can use this command to check that socat is running on TCP port 54321
+top -c
+
+# Once connected to a robot shell session we need to manually edit the ToolComm Forwarder
+nano /ursim/GUI/felix-cache/bundle185/data/com/fzi/rs485/impl/daemon/daemon-rs485.py
+```
+
+This will open a terminal-based text editor where you need to change socat TCP port 54321 to 54322. Use arrows to move the cursor and `ctrl + s` to save. Then `ctrl + x`. Reboot the robot and then check again with `top -c` which TCP port is now used.

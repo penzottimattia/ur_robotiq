@@ -1,41 +1,31 @@
 <?xml version="1.0"?>
-<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur_robotiq">
-	<xacro:include filename="$(find ur_description)/urdf/ur_macro.xacro"/>
-	<xacro:include filename="$(find ur_description)/urdf/ur.ros2_control.xacro"/>
-	<xacro:include filename="$(find robotiq_description)/urdf/ur_to_robotiq_adapter.urdf.xacro"/>
-	<xacro:include filename="$(find robotiq_description)/urdf/robotiq_2f_85_macro.urdf.xacro"/>
-	<xacro:include filename="$(find ur_robotiq)/urdf/ur_robotiq_unit.urdf.xacro"/>
+<robot xmlns:xacro="http://wiki.ros.org/xacro" name="bimanual_ur_mia">
+	<xacro:include filename="$(find ur_robotiq)/urdf/ur_mia_unit.urdf.xacro"/>
 
 	<xacro:arg name="use_mock_hardware" default="true"/>
 	<xacro:arg name="mock_sensor_commands" default="false"/>
 	<xacro:arg name="use_mock_grippers" default="true"/>
-	<xacro:arg name="gripper_fake_sensor_commands" default="false"/>
 	<xacro:arg name="use_calib_probe" default="false"/>
-	<xacro:arg name="gripper_force_multiplier" default="0.01"/>
 
-	<xacro:arg name="left_calib_file" default="$(find ur_description)/config/ur3e/default_kinematics.yaml"/>
-	<xacro:arg name="right_calib_file" default="$(find ur_description)/config/ur3e/default_kinematics.yaml"/>
-	<xacro:arg name="left_gripper_calib_file" default="$(find ur_robotiq)/config/default_gripper_kinematics.yaml"/>
-	<xacro:arg name="right_gripper_calib_file" default="$(find ur_robotiq)/config/default_gripper_kinematics.yaml"/>
+	<xacro:arg name="left_calib_file" default="$(find ur_description)/config/ur5/default_kinematics.yaml"/>
+	<xacro:arg name="right_calib_file" default="$(find ur_description)/config/ur5/default_kinematics.yaml"/>
 
 	<xacro:arg name="left_robot_ip" default="0.0.0.0"/>
 	<xacro:arg name="right_robot_ip" default="0.0.0.0"/>
 	<xacro:arg name="script_filename" default="$(find ur_client_library)/resources/external_control.urscript"/>
 	<xacro:arg name="input_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_input_recipe.txt"/>
 	<xacro:arg name="output_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_output_recipe.txt"/>
-	<xacro:arg name="left_reverse_port" default="50001"/>
-	<xacro:arg name="left_script_sender_port" default="50002"/>
-	<xacro:arg name="left_trajectory_port" default="50003"/>
-	<xacro:arg name="left_script_command_port" default="50004"/>
-	<xacro:arg name="right_reverse_port" default="50101"/>
-	<xacro:arg name="right_script_sender_port" default="50102"/>
-	<xacro:arg name="right_trajectory_port" default="50103"/>
-	<xacro:arg name="right_script_command_port" default="50104"/>
+	<xacro:arg name="left_reverse_port" default="40001"/>
+	<xacro:arg name="left_script_sender_port" default="40002"/>
+	<xacro:arg name="left_trajectory_port" default="40003"/>
+	<xacro:arg name="left_script_command_port" default="40004"/>
+	<xacro:arg name="right_reverse_port" default="50001"/>
+	<xacro:arg name="right_script_sender_port" default="50002"/>
+	<xacro:arg name="right_trajectory_port" default="50003"/>
+	<xacro:arg name="right_script_command_port" default="50004"/>
 	<xacro:arg name="headless_mode" default="false"/>
-	<xacro:arg name="left_gripper_com_port" default="/tmp/ttyUR_left"/>
-	<xacro:arg name="right_gripper_com_port" default="/tmp/ttyUR_right"/>
-	<xacro:arg name="left_tool_tcp_port" default="54321"/>
-	<xacro:arg name="right_tool_tcp_port" default="54322"/>
+	<xacro:arg name="left_hand_serial_port" default="/dev/ttyUSB0"/>
+	<xacro:arg name="right_hand_serial_port" default="/dev/ttyUSB1"/>
 	<xacro:arg name="base_poses_file" default="$(find ur_robotiq)/config/robot_bases.yaml"/>
 
 	<xacro:property name="initial_positions_file" value="$(find ur_robotiq)/config/initial_positions.yaml"/>
@@ -47,11 +37,17 @@
 	<xacro:property name="right_base_xyz" value="${base_poses['right_base_xyz']}"/>
 	<xacro:property name="right_base_rpy" value="${base_poses['right_base_rpy']}"/>
 
+	<xacro:arg name="left_hand_joint_limits_file" default="$(find ur_robotiq)/config/left_hand_joint_limits.yaml"/>
+	<xacro:arg name="right_hand_joint_limits_file" default="$(find ur_robotiq)/config/right_hand_joint_limits.yaml"/>
+	<xacro:arg name="left_hand_transmission_file" default="$(find ur_robotiq)/config/left_hand_transmission.yaml"/>
+	<xacro:arg name="right_hand_transmission_file" default="$(find ur_robotiq)/config/right_hand_transmission.yaml"/>
+
 	<link name="world"/>
 
-	<xacro:ur_robotiq_unit
-		arm_name="left_ur3e"
+	<xacro:ur_mia_unit
+		arm_name="left_ur5"
 		tf_prefix="left_"
+		laterality="left"
 		parent="world"
 		base_xyz="${left_base_xyz}"
 		base_rpy="${left_base_rpy}"
@@ -68,21 +64,18 @@
 		script_sender_port="$(arg left_script_sender_port)"
 		trajectory_port="$(arg left_trajectory_port)"
 		script_command_port="$(arg left_script_command_port)"
-		use_tool_communication="true"
-		tool_voltage="24"
-		tool_device_name="$(arg left_gripper_com_port)"
-		tool_tcp_port="$(arg left_tool_tcp_port)"
-		gripper_name="left_gripper"
-		gripper_use_fake_hardware="$(arg use_mock_grippers)"
-		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
-		gripper_com_port="$(arg left_gripper_com_port)"
-		gripper_closed_position="${xacro.load_yaml('$(arg left_gripper_calib_file)').closed_position}"
-		gripper_force_multiplier="$(arg gripper_force_multiplier)"
-		use_calib_probe="$(arg use_calib_probe)"/>
+		hand_name="left_mia_hand"
+		hand_serial_port="$(arg left_hand_serial_port)"
+		hand_use_mock_hardware="$(arg use_mock_grippers)"
+		use_calib_probe="$(arg use_calib_probe)"
+		joint_limits_config_file="$(arg left_hand_joint_limits_file)"
+		transmission_config_file="$(arg left_hand_transmission_file)"
+		/>
 
-	<xacro:ur_robotiq_unit
-		arm_name="right_ur3e"
+	<xacro:ur_mia_unit
+		arm_name="right_ur5"
 		tf_prefix="right_"
+		laterality="right"
 		parent="world"
 		base_xyz="${right_base_xyz}"
 		base_rpy="${right_base_rpy}"
@@ -99,16 +92,12 @@
 		script_sender_port="$(arg right_script_sender_port)"
 		trajectory_port="$(arg right_trajectory_port)"
 		script_command_port="$(arg right_script_command_port)"
-		use_tool_communication="true"
-		tool_voltage="24"
-		tool_device_name="$(arg right_gripper_com_port)"
-		tool_tcp_port="$(arg right_tool_tcp_port)"
-		gripper_name="right_gripper"
-		gripper_use_fake_hardware="$(arg use_mock_grippers)"
-		gripper_fake_sensor_commands="$(arg gripper_fake_sensor_commands)"
-		gripper_com_port="$(arg right_gripper_com_port)"
-		gripper_closed_position="${xacro.load_yaml('$(arg right_gripper_calib_file)').closed_position}"
-		gripper_force_multiplier="$(arg gripper_force_multiplier)"
-		use_calib_probe="$(arg use_calib_probe)"/>
+		hand_name="right_mia_hand"
+		hand_serial_port="$(arg right_hand_serial_port)"
+		hand_use_mock_hardware="$(arg use_mock_grippers)"
+		use_calib_probe="$(arg use_calib_probe)"
+		joint_limits_config_file="$(arg right_hand_joint_limits_file)"
+		transmission_config_file="$(arg right_hand_transmission_file)"
+		/>
 
 </robot>
