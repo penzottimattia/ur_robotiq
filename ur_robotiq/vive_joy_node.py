@@ -43,26 +43,38 @@ def resolve_topic_type(topic_type: str):
         - "sensor_msgs/JointState"
     """
 
+    normalized = topic_type.strip()
+
     # Convert ROS-style type names into Python module paths.
     #
     # Example:
     #   std_msgs/Float64MultiArray -> std_msgs.msg.Float64MultiArray
     #   sensor_msgs/JointState     -> sensor_msgs.msg.JointState
-    if "/" in topic_type:
-        package, msg_name = topic_type.split("/", maxsplit=1)
-        topic_type = f"{package}.msg.{msg_name}"
+    if "/" in normalized:
+        parts = normalized.split("/")
+        if len(parts) == 2:
+            package, msg_name = parts
+            normalized = f"{package}.msg.{msg_name}"
+        else:
+            normalized = ".".join(parts)
 
-    resolved_type = eval(
-        topic_type,
-        {
-            "__builtins__": {},
-            "std_msgs": std_msgs,
-            "sensor_msgs": sensor_msgs,
-            "Float64MultiArray": Float64MultiArray,
-            "JointState": JointState,
-        },
-        {},
-    )
+    aliases = {
+        "Float64MultiArray": Float64MultiArray,
+        "JointState": JointState,
+        "std_msgs.Float64MultiArray": Float64MultiArray,
+        "std_msgs.msg.Float64MultiArray": Float64MultiArray,
+        "sensor_msgs.JointState": JointState,
+        "sensor_msgs.msg.JointState": JointState,
+    }
+
+    try:
+        resolved_type = aliases[normalized]
+    except KeyError as exc:
+        raise ValueError(
+            f"Unsupported topic_type: {topic_type}. "
+            f"Supported types are: "
+            f"{', '.join(t.__module__ + '.' + t.__name__ for t in SUPPORTED_TOPIC_TYPES)}"
+        ) from exc
 
     assert resolved_type in SUPPORTED_TOPIC_TYPES, (
         f"Unsupported topic_type: {topic_type}. "
