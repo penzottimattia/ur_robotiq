@@ -1,0 +1,44 @@
+# AIKIDO safety controller (sim package) for the bimanual UR + MIA setup.
+# Spawned when use_aikido:=true in control_bimanual_ur_mia.launch.py.
+#
+# A single controller instance simulates the whole robot_description (both
+# arms and grippers) and takes over all joint command interfaces, so the
+# regular arm/cartesian/hand controllers are not spawned alongside it.
+# Multiple end effectors are given as a space-separated list.
+
+controller_manager:
+  ros__parameters:
+    aikido_controller:
+      type: sim_hw_controller/SimHwController
+
+aikido_controller:
+  ros__parameters:
+    command_interfaces:
+      - position
+      - velocity
+    state_interfaces:
+      - position
+      - velocity
+    fixed_frame: left_base_link right_base_link
+    end_effector: left_tool0 right_tool0
+    root_frame: world
+    horizon: 0.2
+    substeps: 5
+    contact_threshold: 0.01
+    control:
+      task_scale: 1.0
+      joint_scale: 1.0
+      null_gain: 1.0
+      scale_attachment: 0.0
+      gripper_damping: 0.0
+      gripper_compliance: 0.0
+    stop_duration: 0.5
+    user_disabled_pairs:
+      - left_forearm_link:left_wrist_1_link # convex-hull of forearm_link will cause false positive collision with wrist_1_link
+      - right_forearm_link:right_wrist_1_link
+    user_disabled_joints:
+      - left_hand_j_thumb_opp:0.0
+      - right_hand_j_thumb_opp:0.0
+    user_limited_joints:
+      - left_hand_j_index_fle:0.3:1.4
+      - right_hand_j_index_fle:0.3:1.4

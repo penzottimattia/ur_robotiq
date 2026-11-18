@@ -92,6 +92,18 @@ def generate_launch_description():
         description='Launch command stitcher node for bimanual control',
     )
 
+    use_aikido_arg = DeclareLaunchArgument(
+        'use_aikido',
+        default_value='false',
+        description='Spawn the AIKIDO safety controller (sim_hw_controller); one instance takes over all joints (both arms and grippers), so the arm, cartesian and hand controllers are not spawned',
+    )
+
+    aikido_target_retarget_frame_arg = DeclareLaunchArgument(
+        'aikido_target_retarget_frame',
+        default_value='',
+        description='Optional (use_aikido only): retarget the published aikido target TransformStamped child frame to this statically-related frame (e.g. tool0). The arm prefix is added if missing. Empty => child stays the dorsum link.',
+    )
+
     # Add calibration file launch arguments so calibration YAMLs are passed through to the URDF xacro
     left_calib_file_arg = DeclareLaunchArgument(
         'left_calib_file',
@@ -150,12 +162,20 @@ def generate_launch_description():
     def launch_ros2_control(context):
         mode = LaunchConfiguration('mode').perform(context)
         real_grippers = mode not in ('full_mock', 'mock_grippers_only')
+        use_aikido = LaunchConfiguration('use_aikido').perform(context) == 'true'
 
         params = [
             robot_description,
             ParameterFile(LaunchConfiguration('controllers_file'), allow_substs=True),
             {'use_sim_time': LaunchConfiguration('use_sim_time')},
         ]
+
+        if use_aikido:
+            params.append(ParameterFile(PathJoinSubstitution([
+                FindPackageShare('ur_robotiq'),
+                'config',
+                'aikido_controllers.yaml',
+            ]), allow_substs=True))
 
         return [Node(
             package='controller_manager',
@@ -218,7 +238,9 @@ def generate_launch_description():
     def launch_state_broadcasters(context):
         mode = LaunchConfiguration('mode').perform(context)
         mock_grippers = mode in ('full_mock', 'mock_grippers_only')
-        if mode == 'calib':
+        use_aikido = LaunchConfiguration('use_aikido').perform(context) == 'true'
+        if mode == 'calib' or use_aikido:
+            # The default joint_state_broadcaster already broadcasts all joints (arms and hands)
             arguments = ['joint_state_broadcaster', '--controller-manager', '/controller_manager']
         else:
             arguments = ['joint_state_broadcaster', 'left_state_broadcaster', 'right_state_broadcaster', '--controller-manager', '/controller_manager']
@@ -233,28 +255,50 @@ def generate_launch_description():
 
     joint_state_broadcaster_spawner = OpaqueFunction(function=launch_state_broadcasters)
 
-    bimanual_controller_spawner = Node(
-        package='controller_manager',
-        executable='spawner',
-        arguments=['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller', '--controller-manager', '/controller_manager'],
-        # arguments=['left_arm_controller', 'left_gripper_controller', '--controller-manager', '/controller_manager'],
-        output='screen',
-        condition=IfCondition(PythonExpression([
-            "'", LaunchConfiguration('use_cartesian_stitcher'), "' == 'true' and '",
-            LaunchConfiguration('mode'), "' != 'calib'"
-        ]))
-    )
+    def launch_bimanual_controller_spawner(context):
+        mode = LaunchConfiguration('mode').perform(context)
+        use_cartesian_stitcher = LaunchConfiguration('use_cartesian_stitcher').perform(context)
+        use_aikido = LaunchConfiguration('use_aikido').perform(context) == 'true'
+        if mode == 'calib' or use_cartesian_stitcher != 'true':
+            return []
+        if use_aikido:
+            # The aikido controller takes over all joints (arm and gripper), nothing else to spawn
+            return []
+        controllers = ['left_arm_controller', 'right_arm_controller', 'left_gripper_controller', 'right_gripper_controller']
+        return [Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=controllers + ['--controller-manager', '/controller_manager'],
+            output='screen',
+        )]
 
-    stopped_controller_spawner = Node(
+    bimanual_controller_spawner = OpaqueFunction(function=launch_bimanual_controller_spawner)
+
+    def launch_stopped_controller_spawner(context):
+        mode = LaunchConfiguration('mode').perform(context)
+        use_cartesian_stitcher = LaunchConfiguration('use_cartesian_stitcher').perform(context)
+        use_aikido = LaunchConfiguration('use_aikido').perform(context) == 'true'
+        if mode == 'calib' or use_cartesian_stitcher == 'true':
+            return []
+        if use_aikido:
+            # The aikido controller takes over all joints (arm and gripper), nothing else to spawn
+            return []
+        controllers = ['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller']
+        return [Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=controllers + ['--controller-manager', '/controller_manager'],
+            output='screen',
+        )]
+
+    stopped_controller_spawner = OpaqueFunction(function=launch_stopped_controller_spawner)
+
+    aikido_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
-        arguments=['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller', '--controller-manager', '/controller_manager'],
-        # arguments=['left_cartesian_controller', 'left_hand_traj_controller', '--controller-manager', '/controller_manager'],
+        arguments=['aikido_controller', '--controller-manager', '/controller_manager'],
         output='screen',
-        condition=IfCondition(PythonExpression([
-            "'", LaunchConfiguration('use_cartesian_stitcher'), "' != 'true' and '",
-            LaunchConfiguration('mode'), "' != 'calib'"
-        ]))
+        condition=IfCondition(LaunchConfiguration('use_aikido')),
     )
 
     left_joint_state_to_traj_node = Node(
@@ -331,64 +375,125 @@ def generate_launch_description():
         }],
     )
 
-    left_tracker_launch = IncludeLaunchDescription(
-        PathJoinSubstitution([
-            FindPackageShare('libsurvive_arm_control'),
-            'launch',
-            'libsurvive_arm_control.launch.py',
-        ]),
-        condition=IfCondition(LaunchConfiguration('use_trackers')),
-        launch_arguments=[
-            ('prefix', 'left_'),
-            ('tracker_frame_id', 'LHR-B618CEC9'),
-            ('tool_frame_id', 'left_dorsum_link'),
-            ('base_frame_id', 'world'),
-            ('tool_output_frame_id', 'left_dorsum_target'),
-            ('output_topic_name', '/left_cartesian_controller/target_frame'),
-            ('publish_static_tf', 'true'),
-            ('config_file', PathJoinSubstitution([
-                FindPackageShare('ur_robotiq'),
-                'config',
-                'base_tracker.yaml',
-            ])),
-        ],
-    )
+    # When driving via aikido the arm target is expressed in the arm's own
+    # base frame (the aikido fixed frame); otherwise the tracker publishes in
+    # world for the cartesian controller.
+    #
+    # Optional: retarget the published aikido target's child frame to another
+    # statically-related frame (e.g. tool0). Pass a frame name (with or without
+    # the arm prefix); the arm prefix is added if missing. Empty => disabled.
+    def aikido_retarget_frame(context, arm):
+        arg = LaunchConfiguration('aikido_target_retarget_frame').perform(context)
+        if arg == '' or LaunchConfiguration('use_aikido').perform(context) != 'true':
+            return ''
+        if arg.startswith(arm + '_'):
+            return arg
+        return arm + '_' + arg
 
-    right_tracker_launch = IncludeLaunchDescription(
-        PathJoinSubstitution([
-            FindPackageShare('libsurvive_arm_control'),
-            'launch',
-            'libsurvive_arm_control.launch.py',
-        ]),
-        condition=IfCondition(LaunchConfiguration('use_trackers')),
-        launch_arguments=[
-            ('prefix', 'right_'),
-            ('tracker_frame_id', 'LHR-428A547D'),
-            ('tool_frame_id', 'right_dorsum_link'),
-            ('base_frame_id', 'world'),
-            ('tool_output_frame_id', 'right_dorsum_target'),
-            ('output_topic_name', '/right_cartesian_controller/target_frame'),
-            ('publish_static_tf', 'false'),
-        ],
-    )
+    def launch_left_tracker(context):
+        if LaunchConfiguration('use_trackers').perform(context) != 'true':
+            return []
+        base_frame = ('left_base_link'
+                      if LaunchConfiguration('use_aikido').perform(context) == 'true'
+                      else 'world')
+        target_topic = ('/target_pose'
+                        if LaunchConfiguration('use_aikido').perform(context) == 'true'
+                        else '')
+        return [IncludeLaunchDescription(
+            PathJoinSubstitution([
+                FindPackageShare('libsurvive_arm_control'),
+                'launch',
+                'libsurvive_arm_control.launch.py',
+            ]),
+            launch_arguments=[
+                ('prefix', 'left_'),
+                ('tracker_frame_id', 'LHR-B618CEC9'),
+                ('tool_frame_id', 'left_dorsum_link'),
+                ('base_frame_id', base_frame),
+                ('tool_output_frame_id', 'left_dorsum_target'),
+                ('output_topic_name', '/left_cartesian_controller/target_frame'),
+                ('target_stamped_topic', target_topic),
+                ('target_retarget_frame', aikido_retarget_frame(context, 'left')),
+                ('publish_static_tf', 'true'),
+                ('config_file', PathJoinSubstitution([
+                    FindPackageShare('ur_robotiq'),
+                    'config',
+                    'base_tracker.yaml',
+                ])),
+            ],
+        )]
 
-    left_glove_node = Node(
+    left_tracker_launch = OpaqueFunction(function=launch_left_tracker)
+
+    def launch_right_tracker(context):
+        if LaunchConfiguration('use_trackers').perform(context) != 'true':
+            return []
+        base_frame = ('right_base_link'
+                      if LaunchConfiguration('use_aikido').perform(context) == 'true'
+                      else 'world')
+        target_topic = ('/target_pose'
+                        if LaunchConfiguration('use_aikido').perform(context) == 'true'
+                        else '')
+        return [IncludeLaunchDescription(
+            PathJoinSubstitution([
+                FindPackageShare('libsurvive_arm_control'),
+                'launch',
+                'libsurvive_arm_control.launch.py',
+            ]),
+            launch_arguments=[
+                ('prefix', 'right_'),
+                ('tracker_frame_id', 'LHR-428A547D'),
+                ('tool_frame_id', 'right_dorsum_link'),
+                ('base_frame_id', base_frame),
+                ('tool_output_frame_id', 'right_dorsum_target'),
+                ('output_topic_name', '/right_cartesian_controller/target_frame'),
+                ('target_stamped_topic', target_topic),
+                ('target_retarget_frame', aikido_retarget_frame(context, 'right')),
+                ('publish_static_tf', 'false'),
+            ],
+        )]
+
+    right_tracker_launch = OpaqueFunction(function=launch_right_tracker)
+
+    # In use_aikido mode the hand controllers are not spawned, so the glove's
+    # hand_state JointState is pointed straight at the aikido controller and the
+    # joints are published with their full URDF names (via joint_prefix).
+    def launch_left_glove(context):
+        if LaunchConfiguration('use_gloves').perform(context) != 'true':
+            return []
+        params = [LaunchConfiguration('left_glove_config_file').perform(context)]
+        if LaunchConfiguration('use_aikido').perform(context) == 'true':
+            params.append({
+                'state_topic': '/target_joint_states',
+                'joint_prefix': 'left_hand_',
+            })
+        return [Node(
             package="senseglove_interface",
             executable="senseglove_interface_node",
             name="left_senseglove_interface",
             output="screen",
-            parameters=[LaunchConfiguration('left_glove_config_file')],
-            condition=IfCondition(LaunchConfiguration('use_gloves'))
-        )
-    
-    right_glove_node = Node(
+            parameters=params,
+        )]
+
+    def launch_right_glove(context):
+        if LaunchConfiguration('use_gloves').perform(context) != 'true':
+            return []
+        params = [LaunchConfiguration('right_glove_config_file').perform(context)]
+        if LaunchConfiguration('use_aikido').perform(context) == 'true':
+            params.append({
+                'state_topic': '/target_joint_states',
+                'joint_prefix': 'right_hand_',
+            })
+        return [Node(
             package="senseglove_interface",
             executable="senseglove_interface_node",
             name="right_senseglove_interface",
             output="screen",
-            parameters=[LaunchConfiguration('right_glove_config_file')],
-            condition=IfCondition(LaunchConfiguration('use_gloves'))
-        )
+            parameters=params,
+        )]
+
+    left_glove_node = OpaqueFunction(function=launch_left_glove)
+    right_glove_node = OpaqueFunction(function=launch_right_glove)
     
     vive_hand_node = Node(
             package="ur_robotiq",
@@ -451,6 +556,8 @@ def generate_launch_description():
         use_trackers_arg,
         use_gloves_arg,
         use_cartesian_stitcher_arg,
+        use_aikido_arg,
+        aikido_target_retarget_frame_arg,
         left_glove_config_file_arg,
         right_glove_config_file_arg,
         base_poses_file_arg,
@@ -467,6 +574,7 @@ def generate_launch_description():
         joint_state_broadcaster_spawner,
         bimanual_controller_spawner,
         stopped_controller_spawner,
+        aikido_controller_spawner,
         left_joint_state_to_traj_node,
         right_joint_state_to_traj_node,
         left_tracker_launch,
