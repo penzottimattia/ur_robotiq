@@ -100,8 +100,8 @@ def generate_launch_description():
 
     aikido_target_retarget_frame_arg = DeclareLaunchArgument(
         'aikido_target_retarget_frame',
-        default_value='',
-        description='Optional (use_aikido only): retarget the published aikido target TransformStamped child frame to this statically-related frame (e.g. tool0). The arm prefix is added if missing. Empty => child stays the dorsum link.',
+        default_value='tool0',
+        description='(use_aikido only): retarget the published aikido target TransformStamped child frame to this statically-related frame. Defaults to tool0 to match the aikido end_effector config. The arm prefix is added if missing. Set to empty to keep the dorsum link as child.',
     )
 
     # Add calibration file launch arguments so calibration YAMLs are passed through to the URDF xacro
