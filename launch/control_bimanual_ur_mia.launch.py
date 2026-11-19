@@ -147,6 +147,7 @@ def generate_launch_description():
         ' use_mock_hardware:=', use_mock_hardware,
         ' use_mock_grippers:=', use_mock_grippers,
         ' use_calib_probe:=', use_calib_probe,
+        ' use_aikido:=', LaunchConfiguration('use_aikido'),
         ' left_robot_ip:=', LaunchConfiguration('left_robot_ip'),
         ' right_robot_ip:=', LaunchConfiguration('right_robot_ip'),
         ' base_poses_file:=', LaunchConfiguration('base_poses_file'),
