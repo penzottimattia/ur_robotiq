@@ -8,6 +8,11 @@
 
 controller_manager:
   ros__parameters:
+    # In Humble the update rate is not passed to the actual controller through 
+    # the get_update_rate(), thus aikido will always expect running to fallback 
+    # value of 100Hz. This is a known issue in Humble and has been already fixed 
+    # in Jazzy.
+    update_rate: 100
     aikido_controller:
       type: sim_hw_controller/SimHwController
 

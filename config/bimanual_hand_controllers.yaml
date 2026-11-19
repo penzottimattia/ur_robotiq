@@ -1,5 +1,9 @@
 controller_manager:
   ros__parameters:
+    # Update rate for ros2_control (Hz): min stable value is 33Hz for UR5 CB-series, 
+    # according to 2x read and 2x write 8 ms blocking calls according to 125Hz UR 
+    # driver update rate. Lower values may cause instability and errors in the UR 
+    # driver (disconnection due to timeout).
     update_rate: 33
 
     joint_state_broadcaster:
