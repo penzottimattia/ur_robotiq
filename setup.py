@@ -49,6 +49,7 @@ setup(
             'realsense_hdf5_recorder = ur_robotiq.realsense_hdf5_recorder:main',
             'realsense_compressed_publisher = ur_robotiq.realsense_compressed_publisher:main',
             'cartesian_absolute_to_delta = ur_robotiq.cartesian_absolute_to_delta:main',
+            'motion_test = ur_robotiq.motion_test:main',
         ],
     },
 )

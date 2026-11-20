@@ -169,7 +169,7 @@
 		{
 			"id": "use_gloves",
 			"type": "pickString",
-			"description": "Enable or disable the use of gloves",
+			"description": "Enable or disable the use of NOVA gloves",
 			"options": [
 				"true",
 				"false"
@@ -179,7 +179,7 @@
 		{
 			"id": "use_trackers",
 			"type": "pickString",
-			"description": "Enable or disable the use of trackers",
+			"description": "Enable or disable the use of VIVE trackers",
 			"options": [
 				"true",
 				"false"
