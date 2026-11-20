@@ -123,6 +123,19 @@
 			"problemMatcher": [],
 		},
 		{
+			"label": "Task: ros2_xpra_rviz",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && xpra start :100 --bind-tcp=10.61.1.237:14500 --html=on --start-child=\"rviz2\" --exit-with-children --daemon=no"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
 			"label": "Task: ros2_rqt",
 			"type": "shell",
 			"command": "bash",
