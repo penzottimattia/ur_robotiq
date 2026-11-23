@@ -45,7 +45,7 @@ TO_CTRL="joint_trajectory_controller"   # controller we activate to home
 FROM_CTRL="aikido_controller"           # controller we deactivate while homing
 SWITCH_BACK=true
 DO_SWITCH=true
-SETTLE=5
+SETTLE=3
 DRY_RUN=false
 FILE=""
 
@@ -77,8 +77,9 @@ Options:
                         Default: $TO_CTRL
       --from CTRL       Controller to deactivate while homing.
                         Default: $FROM_CTRL
-      --settle SECS     Seconds to wait after publishing so the move completes
-                        (the JTC holds the final point). Default: $SETTLE
+      --settle SECS     Margin (seconds) added to the trajectory duration when
+                        waiting for the move to complete (the JTC holds the
+                        final point afterwards). Default: $SETTLE
       --no-switch-back  Leave '$TO_CTRL' active at the end (do not re-engage
                         '$FROM_CTRL').
       --no-switch       Do not switch controllers; assume '$TO_CTRL' is already
@@ -171,11 +172,22 @@ if [[ -n "$actual_type" && "$actual_type" != "$MSG_TYPE" ]]; then
     echo "Warning: $TOPIC is '$actual_type', expected '$MSG_TYPE'." >&2
 fi
 
-# Best-effort sanity check that the file parses as YAML (cheap, catches typos).
-if ! python3 -c "import sys, yaml; yaml.safe_load(open('$FILE'))" 2>/dev/null; then
-    echo "Error: $FILE is not valid YAML." >&2
-    exit 1
-fi
+# Best-effort sanity check that the file parses as YAML (cheap, catches typos),
+# and extract the trajectory duration (max time_from_start over all points).
+TRAJ_SECS="$(python3 -c "
+import sys, yaml
+doc = yaml.safe_load(open('$FILE'))
+secs = 0.0
+for p in (doc or {}).get('points', []):
+    t = p.get('time_from_start') or {}
+    if isinstance(t, dict):
+        secs = max(secs, float(t.get('sec', 0)) + float(t.get('nanosec', 0)) * 1e-9)
+    else:
+        secs = max(secs, float(t))
+print(f'{secs:.3f}')
+" 2>/dev/null || { echo "Error: $FILE is not valid YAML (or has no parseable points)." >&2; exit 1; })"
+WAIT="$(awk -v d="$TRAJ_SECS" -v s="$SETTLE" 'BEGIN{printf "%.1f", d + s}')"
+echo "Trajectory duration    : ${TRAJ_SECS}s (+ ${SETTLE}s settle margin = ${WAIT}s wait)"
 
 # ---------------------------------------------------------------------------
 # Switch controllers
@@ -192,12 +204,14 @@ fi
 echo "Publishing home trajectory to $TO_CTRL ..."
 run ros2 topic pub --once "$TOPIC" "$MSG_TYPE" "$(cat "$FILE")"
 
-# Let the move complete. The JTC holds the final point afterwards.
+# Let the move complete: the JTC interpolates for the trajectory's own
+# duration (the max time_from_start in the file) and holds the final point
+# afterwards, so we wait that long plus a settle margin.
 if $DRY_RUN; then
-    echo "DRY-RUN: sleep $SETTLE"
+    echo "DRY-RUN: sleep $WAIT"
 else
-    echo "Waiting ${SETTLE}s for the move to complete (robot holds at home) ..."
-    sleep "$SETTLE"
+    echo "Waiting ${WAIT}s for the move to complete (${TRAJ_SECS}s trajectory + ${SETTLE}s settle; robot holds at home) ..."
+    sleep "$WAIT"
 fi
 
 # ---------------------------------------------------------------------------
