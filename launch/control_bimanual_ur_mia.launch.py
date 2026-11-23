@@ -4,68 +4,25 @@ from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare, ExecutableInPackage
+from launch_ros.substitutions import FindPackageShare
 
 
-def _pty_peer_wrapper(pidfile, body):
+def _pty_peer_wrapper(body):
     """Bash shield around socat (serial_sim).
 
     socat is third-party: it dies with exit code 130/143 on SIGINT/SIGTERM
     (launch would log 'process has died'), and the pty masters it holds
-    must stay open until ros2_control_node has closed its ports in its
-    destructor. The shield records its pid (so the node wrapper can stop
-    it once the node has exited), ignores SIGINT and, on SIGTERM, kills
-    socat and exits with code 0. When it dies, the simulator sees EOF/EIO
-    on its pty and exits on its own.
+    must outlive Ctrl-C: the controller_manager node still needs a live,
+    responsive peer during its own shutdown (the deactivation stop commands
+    expect ACKs from the simulator and close() must land on a live port).
+    The shield therefore ignores SIGINT and, on SIGTERM (the launch
+    escalation, ~2 s after Ctrl-C), kills socat and exits 0. When the pty
+    masters go away, the simulator sees EOF/EIO and exits on its own.
     """
     return (
-        'echo $$ > ' + pidfile + '; '
         'trap "" INT; '
         "trap 'kill $spid 2>/dev/null; wait $spid 2>/dev/null; exit 0' TERM; "
         + body + ' & spid=$!; wait $spid; exit 0'
-    )
-
-
-def _ros2_control_node_wrapper(prefix):
-    """Bash wrapper running ros2_control_node (serial_sim only).
-
-    The serial plugin fails to start if its pty is not ready and closes its
-    ports only in the node's destructor, so the node is run as a child:
-    the wrapper waits for the socat ptys, forwards SIGINT/SIGTERM to the
-    node, waits for the node's real exit code, then terminates the socat
-    shield (see _pty_peer_wrapper). Losing the pty masters makes the
-    simulators exit on their own (EOF/EIO). Everything is gone a second
-    after Ctrl-C; the launch escalation timers act only as a backstop.
-    """
-    pty_left, pty_right = f'{prefix}_left', f'{prefix}_right'
-    pidfiles = ' '.join(f'{prefix}_{s}.pid' for s in ('left', 'right'))
-    stop_peers = (
-        'for f in ' + pidfiles + '; do '
-        'p=$(cat $f 2>/dev/null) || continue; '
-        "if [ -n \"$p\" ] && [ -d /proc/$p ] && tr '\\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -q \"" + prefix + "\"; then "
-        'kill -TERM "$p" 2>/dev/null; fi; '
-        'rm -f $f; '
-        'done; '
-        # Sweep orphaned socats (e.g. the shield died abnormally): they hold
-        # the pty masters open, so the sims would never see EOF. The [lr]eft
-        # pattern does not match this script's own cmdline.
-        "pkill -TERM -f \"socat pty,raw,echo=0,link=" + prefix + "_[lr]eft\" 2>/dev/null"
-    )
-    return (
-        f'for i in $(seq 1 60); do'
-        f' [ -e {pty_left} ] && [ -e {pty_right} ] && break;'
-        f' sleep 0.5; done;'
-        f' if [ ! -e {pty_left} ] || [ ! -e {pty_right} ]; then'
-        f' echo "serial_sim: ptys {pty_left} {pty_right} not created by socat" >&2;'
-        f' exit 1; fi;'
-        f' sleep 2;'
-        f' "$@" & nspid=$!;'
-        f" trap 'kill -INT $nspid 2>/dev/null' INT;"
-        f" trap 'kill -TERM $nspid 2>/dev/null' TERM;"
-        f' wait $nspid; rc=$?;'
-        f' if [ \"$rc\" -gt 128 ]; then wait $nspid; rc=$?; fi;'
-        f' {stop_peers};'
-        f' exit $rc'
     )
 
 
@@ -251,7 +208,6 @@ def generate_launch_description():
     robot_description = {'robot_description': robot_description_content}
 
     def launch_ros2_control(context):
-        mode = LaunchConfiguration('mode').perform(context)
         use_aikido = LaunchConfiguration('use_aikido').perform(context) == 'true'
 
         params = [
@@ -273,19 +229,7 @@ def generate_launch_description():
             output='screen',
             parameters=params,
         )
-
-        if mode != 'serial_sim':
-            return [node]
-
-        prefix = LaunchConfiguration('serial_sim_prefix').perform(context)
-        return [Node(
-            executable='/bin/bash',
-            arguments=['-c', _ros2_control_node_wrapper(prefix), 'sh',
-                       ExecutableInPackage(package='controller_manager',
-                                           executable='ros2_control_node')],
-            output='screen',
-            parameters=params,
-        )]
+        return [node]
 
     robot_state_publisher = Node(
         package='robot_state_publisher',
@@ -662,15 +606,15 @@ def generate_launch_description():
 
         The driver side of each pty is presented to the real
         MiaHandSystemInterface serial plugin as the hand's com port; the sim
-        emulates the MiaHand firmware on the other side.
+        emulates the MiaHand firmware on the other side. The plugin retries
+        the serial open for up to 60 s, so the ptys may appear slightly
+        after the node starts.
 
-        Shutdown: the node keeps the serial bus busy while it shuts down and
-        closes its ports only in its destructor, so both peers must outlive
-        Ctrl-C (SIGINT). socat cannot be told to ignore SIGINT (and would
-        exit 130/143 anyway), so it runs behind a small shield; the sim
-        handles SIGINT/SIGTERM itself. Once the node exits, the node wrapper
-        terminates the shields (exit 0), and the sims exit on their own when
-        the pty masters go away.
+        Shutdown: the node needs its peers alive and responsive while it
+        shuts down, so both peers ignore SIGINT; ~2 s after Ctrl-C the
+        launch SIGTERM escalation (sigterm_timeout) stops the shields, the
+        shields kill socat (exit 0), and the sims exit on their own when
+        the pty masters go away (or by their own TERM).
         """
         if LaunchConfiguration('mode').perform(context) != 'serial_sim':
             return []
@@ -682,11 +626,15 @@ def generate_launch_description():
             sim_pty = f'{prefix}_{side}_sim'
             actions.append(ExecuteProcess(
                 cmd=['bash', '-c',
-                     _pty_peer_wrapper(f'{drv_pty}.pid',
-                                       f'rm -f {drv_pty} {sim_pty}; '
-                                       f'socat pty,raw,echo=0,link={drv_pty} pty,raw,echo=0,link={sim_pty}')],
+                     _pty_peer_wrapper(
+                         f'rm -f {drv_pty} {sim_pty}; '
+                         f'socat pty,raw,echo=0,link={drv_pty} pty,raw,echo=0,link={sim_pty}')],
                 name=f'mia_sim_socat_{side}',
                 output='screen',
+                # SIGTERM (the launch escalation) must stop the shield
+                # cleanly; its trap kills socat and exits 0.
+                sigterm_timeout="2.0",
+                sigkill_timeout="5.0",
             ))
             # The simulator is a regular launch process: it ignores SIGINT
             # (the node keeps the bus busy while shutting down), exits with
@@ -696,6 +644,8 @@ def generate_launch_description():
                 cmd=[sim_executable, '-u', sim_pty],
                 name=f'mia_hand_sim_{side}',
                 output='screen',
+                sigterm_timeout="2.0",
+                sigkill_timeout="5.0",
             ))
         return actions
 

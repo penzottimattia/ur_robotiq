@@ -184,18 +184,21 @@ ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py \
 ```
 
 Requirements: `socat` installed and the `mia_hand_sim` binary built
-(`g++ -std=c++17 -o mia_hand_sim mia_hand_sim.cpp -pthread`). The launch file
-waits for the ptys before starting `ros2_control_node`, since the serial
-plugin fails if its port is not ready.
+(`g++ -std=c++17 -o mia_hand_sim mia_hand_sim.cpp -pthread`). The serial
+plugin retries the port open for up to 60 s, so the ptys may appear
+slightly after the node starts (and a USB hand may be plugged in after the
+launch begins).
 
-Shutdown is handled explicitly: the serial plugin keeps the bus busy while
-the node shuts down and closes its ports in its destructor, so the pty
-peers must outlive Ctrl-C. The simulators ignore SIGINT and exit 0 on
-SIGTERM/peer-loss (they are regular launch processes); socat - which
-exits 130/143 on signals - runs behind a small bash shield, and
-`ros2_control_node` runs as a child of a wrapper that forwards signals
-to it and terminates the shields once it has exited. Ctrl-C brings the
-whole stack down within a second, every process exits with code 0.
+Shutdown: the serial plugin keeps the bus busy while the node shuts down
+and closes its ports in its destructor, so the pty peers must stay alive
+and responsive a little longer than Ctrl-C. Both peers therefore ignore
+SIGINT: the simulators exit 0 on SIGTERM/peer-loss, and socat - which
+exits 130/143 on signals - runs behind a small bash shield that kills it
+and exits 0 on SIGTERM. `ros2_control_node` is a plain process; `launch`
+reaps the peers with its SIGTERM escalation (`sigterm_timeout=2 s`).
+Ctrl-C brings the whole stack down in ~2 s, every process exits with code
+0 (the four `failed to terminate ... escalating to SIGTERM` lines are the
+expected reaping, not failures).
 
 Inspect all arguments accepted by a launch file with:
 
