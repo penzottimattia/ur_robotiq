@@ -163,6 +163,40 @@ ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py \
   mode:=full_mock
 ```
 
+### Start the UR5 + MIA stack with simulated hands over the real serial interface
+
+`mode:=serial_sim` uses the real `MiaHandSystemInterface` serial plugin instead of
+the `mock_components/GenericSystem` mock for the hands. The arms stay mocked.
+For each hand the launch file starts a `socat` pty pair and a
+`mia_hand_sim` process (a standalone serial simulator emulating the
+MiaHand firmware protocol) on the simulator side; the plugin talks to
+the driver-side pty exactly like it would to a real hand over USB:
+
+```text
+driver (MiaHandSystemInterface) <-> /tmp/ttyMIA_{left,right} (socat pty) <-> /tmp/ttyMIA_{left,right}_sim <-> mia_hand_sim
+```
+
+```bash
+ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py \
+  mode:=serial_sim \
+  mia_hand_sim_executable:=/opt/mia_hand_sim/mia_hand_sim \
+  serial_sim_prefix:=/tmp/ttyMIA
+```
+
+Requirements: `socat` installed and the `mia_hand_sim` binary built
+(`g++ -std=c++17 -o mia_hand_sim mia_hand_sim.cpp -pthread`). The launch file
+waits for the ptys before starting `ros2_control_node`, since the serial
+plugin fails if its port is not ready.
+
+Shutdown is handled explicitly: the serial plugin keeps the bus busy while
+the node shuts down and closes its ports in its destructor, so the pty
+peers must outlive Ctrl-C. The simulators ignore SIGINT and exit 0 on
+SIGTERM/peer-loss (they are regular launch processes); socat - which
+exits 130/143 on signals - runs behind a small bash shield, and
+`ros2_control_node` runs as a child of a wrapper that forwards signals
+to it and terminates the shields once it has exited. Ctrl-C brings the
+whole stack down within a second, every process exits with code 0.
+
 Inspect all arguments accepted by a launch file with:
 
 ```bash

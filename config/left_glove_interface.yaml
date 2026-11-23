@@ -4,3 +4,7 @@ left_senseglove_interface:
     side: "l"
     output_topic: "/left_hand_controller/commands"
     state_topic: "/left_hand_controller/target_state"
+    calibration_window: 5.0
+    calibration_contract_delay: 10.0
+    calibration_floor_memory: 300.0
+    calibration_mode: auto

@@ -1,0 +1,61 @@
+# Home trajectory published by scripts/home_robots.sh to home the robot.
+#
+# This file is a (partial) `trajectory_msgs/msg/JointTrajectory` message.
+# It is passed straight to `ros2 topic pub`, which does yaml.safe_load() on it
+# and maps the keys onto the message fields -- so the file content is exactly
+# the message (the ROS1 `rostopic pub ... "$(cat file)"` pattern).
+#
+# Only the fields below are set; everything else (header, velocities,
+# accelerations, effort) is left at its default by `ros2 topic pub`.
+#
+# joint_names MUST line up 1:1 (same order) with the positions array, and the
+# order matches the `joints:` list of joint_trajectory_controller in
+# config/aikido_controllers.yaml.
+#
+# time_from_start is how long (seconds) the homing move takes.
+
+joint_names:
+  - left_shoulder_pan_joint
+  - left_shoulder_lift_joint
+  - left_elbow_joint
+  - left_wrist_1_joint
+  - left_wrist_2_joint
+  - left_wrist_3_joint
+  - left_hand_j_thumb_fle
+  - left_hand_j_index_fle
+  - left_hand_j_mrl_fle
+  - right_shoulder_pan_joint
+  - right_shoulder_lift_joint
+  - right_elbow_joint
+  - right_wrist_1_joint
+  - right_wrist_2_joint
+  - right_wrist_3_joint
+  - right_hand_j_thumb_fle
+  - right_hand_j_index_fle
+  - right_hand_j_mrl_fle
+
+points:
+  - positions:
+      - 0.3808500    # left_shoulder_pan_joint
+      - -1.866378    # left_shoulder_lift_joint
+      - -1.772227    # left_elbow_joint
+      - 3.6457374    # left_wrist_1_joint
+      - -1.239481    # left_wrist_2_joint
+      - 0.0         # left_wrist_3_joint
+      # --- left hand (placeholder -- send me your values) ---
+      - 0.0         # left_hand_j_thumb_fle
+      - 0.3         # left_hand_j_index_fle
+      - 0.0         # left_hand_j_mrl_fle
+      - -0.583944   # right_shoulder_pan_joint
+      - -1.300019   # right_shoulder_lift_joint
+      - 1.8046739   # right_elbow_joint
+      - -0.437823   # right_wrist_1_joint
+      - 0.9512651   # right_wrist_2_joint
+      - 0.0         # right_wrist_3_joint
+      # --- right hand (placeholder -- send me your values) ---
+      - 0.0         # right_hand_j_thumb_fle
+      - 0.3         # right_hand_j_index_fle
+      - 0.0         # right_hand_j_mrl_fle
+    time_from_start:
+      sec: 10
+      nanosec: 0

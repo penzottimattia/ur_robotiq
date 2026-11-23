@@ -4,14 +4,78 @@ from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import Command, LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.parameter_descriptions import ParameterFile
 from launch_ros.actions import Node
-from launch_ros.substitutions import FindPackageShare
+from launch_ros.substitutions import FindPackageShare, ExecutableInPackage
+
+
+def _pty_peer_wrapper(pidfile, body):
+    """Bash shield around socat (serial_sim).
+
+    socat is third-party: it dies with exit code 130/143 on SIGINT/SIGTERM
+    (launch would log 'process has died'), and the pty masters it holds
+    must stay open until ros2_control_node has closed its ports in its
+    destructor. The shield records its pid (so the node wrapper can stop
+    it once the node has exited), ignores SIGINT and, on SIGTERM, kills
+    socat and exits with code 0. When it dies, the simulator sees EOF/EIO
+    on its pty and exits on its own.
+    """
+    return (
+        'echo $$ > ' + pidfile + '; '
+        'trap "" INT; '
+        "trap 'kill $spid 2>/dev/null; wait $spid 2>/dev/null; exit 0' TERM; "
+        + body + ' & spid=$!; wait $spid; exit 0'
+    )
+
+
+def _ros2_control_node_wrapper(prefix):
+    """Bash wrapper running ros2_control_node (serial_sim only).
+
+    The serial plugin fails to start if its pty is not ready and closes its
+    ports only in the node's destructor, so the node is run as a child:
+    the wrapper waits for the socat ptys, forwards SIGINT/SIGTERM to the
+    node, waits for the node's real exit code, then terminates the socat
+    shield (see _pty_peer_wrapper). Losing the pty masters makes the
+    simulators exit on their own (EOF/EIO). Everything is gone a second
+    after Ctrl-C; the launch escalation timers act only as a backstop.
+    """
+    pty_left, pty_right = f'{prefix}_left', f'{prefix}_right'
+    pidfiles = ' '.join(f'{prefix}_{s}.pid' for s in ('left', 'right'))
+    stop_peers = (
+        'for f in ' + pidfiles + '; do '
+        'p=$(cat $f 2>/dev/null) || continue; '
+        "if [ -n \"$p\" ] && [ -d /proc/$p ] && tr '\\0' ' ' < /proc/$p/cmdline 2>/dev/null | grep -q \"" + prefix + "\"; then "
+        'kill -TERM "$p" 2>/dev/null; fi; '
+        'rm -f $f; '
+        'done; '
+        # Sweep orphaned socats (e.g. the shield died abnormally): they hold
+        # the pty masters open, so the sims would never see EOF. The [lr]eft
+        # pattern does not match this script's own cmdline.
+        "pkill -TERM -f \"socat pty,raw,echo=0,link=" + prefix + "_[lr]eft\" 2>/dev/null"
+    )
+    return (
+        f'for i in $(seq 1 60); do'
+        f' [ -e {pty_left} ] && [ -e {pty_right} ] && break;'
+        f' sleep 0.5; done;'
+        f' if [ ! -e {pty_left} ] || [ ! -e {pty_right} ]; then'
+        f' echo "serial_sim: ptys {pty_left} {pty_right} not created by socat" >&2;'
+        f' exit 1; fi;'
+        f' sleep 2;'
+        f' "$@" & nspid=$!;'
+        f" trap 'kill -INT $nspid 2>/dev/null' INT;"
+        f" trap 'kill -TERM $nspid 2>/dev/null' TERM;"
+        f' wait $nspid; rc=$?;'
+        f' if [ \"$rc\" -gt 128 ]; then wait $nspid; rc=$?; fi;'
+        f' {stop_peers};'
+        f' exit $rc'
+    )
 
 
 def generate_launch_description():
     mode_arg = DeclareLaunchArgument(
         'mode',
         default_value='full_mock',
-        description='Control mode: full_mock, mock_grippers_only, or calib',
+        description='Control mode: full_mock, mock_grippers_only, serial_sim, or calib. '
+                    'serial_sim uses the real MiaHandSystemInterface serial plugin, '
+                    'backed by mia_hand_sim processes over a socat pty pair (arms stay mocked).',
     )
     use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='false')
 
@@ -26,6 +90,16 @@ def generate_launch_description():
         'right_mia_port',
         default_value='/dev/ttyUSB1',
         description='Serial port for right MIA',
+    )
+    mia_hand_sim_executable_arg = DeclareLaunchArgument(
+        'mia_hand_sim_executable',
+        default_value='/opt/mia_hand_sim/mia_hand_sim',
+        description='Path to the mia_hand_sim binary (serial_sim mode only)',
+    )
+    serial_sim_prefix_arg = DeclareLaunchArgument(
+        'serial_sim_prefix',
+        default_value='/tmp/ttyMIA',
+        description='Link prefix for the socat pty pair (serial_sim mode only)',
     )
     base_poses_file_arg = DeclareLaunchArgument(
         'base_poses_file',
@@ -132,13 +206,29 @@ def generate_launch_description():
     ])
 
     use_mock_hardware = PythonExpression([
-        "'", LaunchConfiguration('mode'), "' == 'full_mock'",
+        "'", LaunchConfiguration('mode'), "' in ['full_mock', 'serial_sim']",
     ])
     use_mock_grippers = PythonExpression([
         "'", LaunchConfiguration('mode'), "' in ['full_mock', 'mock_grippers_only']",
     ])
     use_calib_probe = PythonExpression([
         "'", LaunchConfiguration('mode'), "' == 'calib'",
+    ])
+    use_serial_sim = PythonExpression([
+        "'", LaunchConfiguration('mode'), "' == 'serial_sim'",
+    ])
+
+    # In serial_sim mode the hands are driven through the real serial plugin,
+    # so the xacro gets the socat pty (driver side) instead of a USB port.
+    left_hand_serial_port = PythonExpression([
+        "('", LaunchConfiguration('serial_sim_prefix'), "' + '_left') if '",
+        LaunchConfiguration('mode'), "' == 'serial_sim' else '",
+        LaunchConfiguration('left_mia_port'), "'",
+    ])
+    right_hand_serial_port = PythonExpression([
+        "('", LaunchConfiguration('serial_sim_prefix'), "' + '_right') if '",
+        LaunchConfiguration('mode'), "' == 'serial_sim' else '",
+        LaunchConfiguration('right_mia_port'), "'",
     ])
 
     robot_description_content = Command([
@@ -154,15 +244,14 @@ def generate_launch_description():
         # Pass calibration file paths through to the xacro so they are available in the generated robot_description
         ' left_calib_file:=', LaunchConfiguration('left_calib_file'),
         ' right_calib_file:=', LaunchConfiguration('right_calib_file'),
-        ' left_hand_serial_port:=', LaunchConfiguration('left_mia_port'),
-        ' right_hand_serial_port:=', LaunchConfiguration('right_mia_port'),
+        ' left_hand_serial_port:=', left_hand_serial_port,
+        ' right_hand_serial_port:=', right_hand_serial_port,
     ])
 
     robot_description = {'robot_description': robot_description_content}
 
     def launch_ros2_control(context):
         mode = LaunchConfiguration('mode').perform(context)
-        real_grippers = mode not in ('full_mock', 'mock_grippers_only')
         use_aikido = LaunchConfiguration('use_aikido').perform(context) == 'true'
 
         params = [
@@ -178,9 +267,22 @@ def generate_launch_description():
                 'aikido_controllers.yaml',
             ]), allow_substs=True))
 
-        return [Node(
+        node = Node(
             package='controller_manager',
             executable='ros2_control_node',
+            output='screen',
+            parameters=params,
+        )
+
+        if mode != 'serial_sim':
+            return [node]
+
+        prefix = LaunchConfiguration('serial_sim_prefix').perform(context)
+        return [Node(
+            executable='/bin/bash',
+            arguments=['-c', _ros2_control_node_wrapper(prefix), 'sh',
+                       ExecutableInPackage(package='controller_manager',
+                                           executable='ros2_control_node')],
             output='screen',
             parameters=params,
         )]
@@ -282,8 +384,16 @@ def generate_launch_description():
         if mode == 'calib' or use_cartesian_stitcher == 'true':
             return []
         if use_aikido:
-            # The aikido controller takes over all joints (arm and gripper), nothing else to spawn
-            return []
+            # The aikido controller takes over all joints (arm and gripper). The
+            # joint_trajectory_controller is loaded as well but left in the stopped
+            # state so it does not claim command interfaces and can be activated on
+            # demand later (ros2 control activate_controller joint_trajectory_controller).
+            return [Node(
+                package='controller_manager',
+                executable='spawner',
+                arguments=['joint_trajectory_controller', '--stopped', '--controller-manager', '/controller_manager'],
+                output='screen',
+            )]
         controllers = ['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller']
         return [Node(
             package='controller_manager',
@@ -547,6 +657,50 @@ def generate_launch_description():
         )
 
 
+    def launch_serial_sim(context):
+        """Spawn the socat pty pair + a mia_hand_sim per hand (serial_sim mode).
+
+        The driver side of each pty is presented to the real
+        MiaHandSystemInterface serial plugin as the hand's com port; the sim
+        emulates the MiaHand firmware on the other side.
+
+        Shutdown: the node keeps the serial bus busy while it shuts down and
+        closes its ports only in its destructor, so both peers must outlive
+        Ctrl-C (SIGINT). socat cannot be told to ignore SIGINT (and would
+        exit 130/143 anyway), so it runs behind a small shield; the sim
+        handles SIGINT/SIGTERM itself. Once the node exits, the node wrapper
+        terminates the shields (exit 0), and the sims exit on their own when
+        the pty masters go away.
+        """
+        if LaunchConfiguration('mode').perform(context) != 'serial_sim':
+            return []
+        prefix = LaunchConfiguration('serial_sim_prefix').perform(context)
+        sim_executable = LaunchConfiguration('mia_hand_sim_executable').perform(context)
+        actions = []
+        for side in ('left', 'right'):
+            drv_pty = f'{prefix}_{side}'
+            sim_pty = f'{prefix}_{side}_sim'
+            actions.append(ExecuteProcess(
+                cmd=['bash', '-c',
+                     _pty_peer_wrapper(f'{drv_pty}.pid',
+                                       f'rm -f {drv_pty} {sim_pty}; '
+                                       f'socat pty,raw,echo=0,link={drv_pty} pty,raw,echo=0,link={sim_pty}')],
+                name=f'mia_sim_socat_{side}',
+                output='screen',
+            ))
+            # The simulator is a regular launch process: it ignores SIGINT
+            # (the node keeps the bus busy while shutting down), exits with
+            # 0 on SIGTERM, and exits on its own when the pty peer (socat)
+            # goes away - no wrapper needed.
+            actions.append(ExecuteProcess(
+                cmd=[sim_executable, '-u', sim_pty],
+                name=f'mia_hand_sim_{side}',
+                output='screen',
+            ))
+        return actions
+
+    serial_sim_launch = OpaqueFunction(function=launch_serial_sim)
+
     return LaunchDescription([
         mode_arg,
         use_sim_time_arg,
@@ -554,6 +708,8 @@ def generate_launch_description():
         right_robot_ip_arg,
         left_mia_port_arg,
         right_mia_port_arg,
+        mia_hand_sim_executable_arg,
+        serial_sim_prefix_arg,
         use_trackers_arg,
         use_gloves_arg,
         use_cartesian_stitcher_arg,
@@ -567,6 +723,7 @@ def generate_launch_description():
         controllers_file_arg,
         left_calib_file_arg,
         right_calib_file_arg,
+        serial_sim_launch,
         robot_state_publisher,
         robot_state_publisher_without_remapper,
         left_mia_joint_state_remapper,

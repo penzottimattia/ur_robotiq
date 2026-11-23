@@ -4,3 +4,7 @@ right_senseglove_interface:
     side: "r"
     output_topic: "/right_hand_controller/commands"
     state_topic: "/right_hand_controller/target_state"
+    calibration_window: 5.0
+    calibration_contract_delay: 10.0
+    calibration_floor_memory: 300.0
+    calibration_mode: auto
