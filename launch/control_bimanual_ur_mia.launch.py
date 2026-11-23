@@ -32,12 +32,32 @@ def generate_launch_description():
         default_value='full_mock',
         description='Control mode: full_mock, mock_grippers_only, serial_sim, or calib. '
                     'serial_sim uses the real MiaHandSystemInterface serial plugin, '
-                    'backed by mia_hand_sim processes over a socat pty pair (arms stay mocked).',
+                    'backed by mia_hand_sim processes over a socat pty pair. '
+                    'By default serial_sim/full_mock also mock the arms; pass '
+                    'use_mock_arms:=false (with left_robot_ip/right_robot_ip) to '
+                    'run real robot arms with the simulated hands.',
+    )
+    use_mock_arms_arg = DeclareLaunchArgument(
+        'use_mock_arms',
+        default_value='auto',
+        description="Arm hardware: 'auto' derives it from mode (mocked for full_mock/"
+                    'serial_sim, real otherwise); set true/false to override explicitly. '
+                    'Real arms require valid left_robot_ip/right_robot_ip.',
     )
     use_sim_time_arg = DeclareLaunchArgument('use_sim_time', default_value='false')
 
     left_robot_ip_arg = DeclareLaunchArgument('left_robot_ip', default_value='0.0.0.0')
     right_robot_ip_arg = DeclareLaunchArgument('right_robot_ip', default_value='0.0.0.0')
+    left_ur_type_arg = DeclareLaunchArgument(
+        'left_ur_type',
+        default_value='ur5',
+        description='UR robot type of the left arm (real-arm modes only, e.g. ur5, ur5e, ur3e)',
+    )
+    right_ur_type_arg = DeclareLaunchArgument(
+        'right_ur_type',
+        default_value='ur5',
+        description='UR robot type of the right arm (real-arm modes only, e.g. ur5, ur5e, ur3e)',
+    )
     left_mia_port_arg = DeclareLaunchArgument(
         'left_mia_port',
         default_value='/dev/ttyUSB0',
@@ -162,7 +182,13 @@ def generate_launch_description():
         'ur_mia.urdf',
     ])
 
+    # The arms' hardware (mock vs real UR driver) is decoupled from the hands':
+    # use_mock_arms overrides the mode default (mocked arms for full_mock and
+    # serial_sim, real arms otherwise), so e.g. serial_sim hands can run on
+    # real robot arms (mode:=serial_sim use_mock_arms:=false).
     use_mock_hardware = PythonExpression([
+        "True if '", LaunchConfiguration('use_mock_arms'), "' == 'true' else ",
+        "False if '", LaunchConfiguration('use_mock_arms'), "' == 'false' else ",
         "'", LaunchConfiguration('mode'), "' in ['full_mock', 'serial_sim']",
     ])
     use_mock_grippers = PythonExpression([
@@ -197,6 +223,8 @@ def generate_launch_description():
         ' use_aikido:=', LaunchConfiguration('use_aikido'),
         ' left_robot_ip:=', LaunchConfiguration('left_robot_ip'),
         ' right_robot_ip:=', LaunchConfiguration('right_robot_ip'),
+        ' left_ur_type:=', LaunchConfiguration('left_ur_type'),
+        ' right_ur_type:=', LaunchConfiguration('right_ur_type'),
         ' base_poses_file:=', LaunchConfiguration('base_poses_file'),
         # Pass calibration file paths through to the xacro so they are available in the generated robot_description
         ' left_calib_file:=', LaunchConfiguration('left_calib_file'),
@@ -653,9 +681,12 @@ def generate_launch_description():
 
     return LaunchDescription([
         mode_arg,
+        use_mock_arms_arg,
         use_sim_time_arg,
         left_robot_ip_arg,
         right_robot_ip_arg,
+        left_ur_type_arg,
+        right_ur_type_arg,
         left_mia_port_arg,
         right_mia_port_arg,
         mia_hand_sim_executable_arg,

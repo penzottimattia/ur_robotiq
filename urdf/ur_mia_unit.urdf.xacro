@@ -15,7 +15,7 @@
 	<xacro:arg name="transmission_config_file" default="$(find mia_hand_description)/calibration/transmission_config_default.yaml"/>
 
 	<xacro:macro name="ur_mia_unit" params="
-		arm_name:='ur5' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
+		arm_name:='ur5' ur_type:='ur5' tf_prefix:='' parent:='world' base_xyz:='0 0 0' base_rpy:='0 0 0'
 		laterality:='right'
 		use_mock_hardware:='true' mock_sensor_commands:='false' headless_mode:='false'
 		initial_positions:=${default_initial_positions}
@@ -52,6 +52,7 @@
 			headless_mode="${headless_mode}"
 			initial_positions="${initial_positions}"
 			robot_ip="${robot_ip}"
+			ur_type="${ur_type}"
 			script_filename="${script_filename}"
 			output_recipe_filename="${output_recipe_filename}"
 			input_recipe_filename="${input_recipe_filename}"

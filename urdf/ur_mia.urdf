@@ -13,6 +13,8 @@
 
 	<xacro:arg name="left_robot_ip" default="0.0.0.0"/>
 	<xacro:arg name="right_robot_ip" default="0.0.0.0"/>
+	<xacro:arg name="left_ur_type" default="ur5"/>
+	<xacro:arg name="right_ur_type" default="ur5"/>
 	<xacro:arg name="script_filename" default="$(find ur_client_library)/resources/external_control.urscript"/>
 	<xacro:arg name="input_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_input_recipe.txt"/>
 	<xacro:arg name="output_recipe_filename" default="$(find ur_robot_driver)/resources/rtde_output_recipe.txt"/>
@@ -47,6 +49,7 @@
 
 	<xacro:ur_mia_unit
 		arm_name="left_ur5"
+		ur_type="$(arg left_ur_type)"
 		tf_prefix="left_"
 		laterality="left"
 		parent="world"
@@ -76,6 +79,7 @@
 
 	<xacro:ur_mia_unit
 		arm_name="right_ur5"
+		ur_type="$(arg right_ur_type)"
 		tf_prefix="right_"
 		laterality="right"
 		parent="world"

@@ -189,6 +189,21 @@ plugin retries the port open for up to 60 s, so the ptys may appear
 slightly after the node starts (and a USB hand may be plugged in after the
 launch begins).
 
+Real robot arms + simulated hands: by default `serial_sim` also mocks the
+arms. To run real UR arms with the simulated hands, pass
+`use_mock_arms:=false` with the robots' addresses (the arm type is
+`left_ur_type`/`right_ur_type`, default `ur5`):
+
+```bash
+ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py \
+  mode:=serial_sim use_mock_arms:=false \
+  left_robot_ip:=192.168.56.4 right_robot_ip:=192.168.56.5
+```
+
+The arms are then driven through the real `ur_robot_driver` plugin (the
+`dashboard_client` nodes start as well); the hands still go through the
+real `MiaHandSystemInterface` plugin, backed by the simulator.
+
 Shutdown: the serial plugin keeps the bus busy while the node shuts down
 and closes its ports in its destructor, so the pty peers must stay alive
 and responsive a little longer than Ctrl-C. Both peers therefore ignore
