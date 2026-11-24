@@ -47,6 +47,29 @@
 
 	<link name="world"/>
 
+	<link name="floor">
+		<visual>
+			<origin xyz="0 0 -0.025" rpy="0 0 0"/>
+			<geometry>
+				<box size="4 4 0.05"/>
+			</geometry>
+			<material name="floor_material">
+				<color rgba="1 1 1 0.5"/>
+			</material>
+		</visual>
+		<collision>
+			<origin xyz="0 0 -0.025" rpy="0 0 0"/>
+			<geometry>
+				<box size="4 4 0.05"/>
+			</geometry>
+		</collision>
+	</link>
+	<joint name="world_to_floor" type="fixed">
+		<parent link="world"/>
+		<child link="floor"/>
+		<origin xyz="0.3 0.3 -0.12" rpy="0 0 0"/>
+	</joint>
+
 	<xacro:ur_mia_unit
 		arm_name="left_ur5"
 		ur_type="$(arg left_ur_type)"

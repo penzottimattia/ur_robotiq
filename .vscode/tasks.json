@@ -37,7 +37,7 @@
             "command": "bash",
             "args": [
                 "-c",
-				"source /ws/install/setup.bash && ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py use_aikido:=true use_gloves:=${input:use_gloves} use_trackers:=${input:use_trackers} left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 right_mia_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTGRD1P9-if00-port0 left_mia_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTBWH3EC-if00-port0 mode:=full_mock"
+				"source /ws/install/setup.bash && ros2 launch ur_robotiq control_bimanual_ur_mia.launch.py use_aikido:=true use_gloves:=${input:use_gloves} use_trackers:=${input:use_trackers} left_robot_ip:=192.168.1.4 right_robot_ip:=192.168.1.5 right_mia_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTGRD1P9-if00-port0 left_mia_port:=/dev/serial/by-id/usb-FTDI_TTL-232R-3V3-AJ_FTBWH3EC-if00-port0 mode:=none"
             ],
             "options": {
                 "cwd": "${workspaceFolder}"
@@ -154,7 +154,7 @@
 			"command": "bash",
 			"args": [
 				"-c",
-				"source /ws/install/setup.bash && /ws/src/ur_robotiq/scripts/home_robots.sh"
+				"source /ws/install/setup.bash && /ws/src/ur_robotiq/scripts/home_robots.sh --no-switch-back"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}",
@@ -168,6 +168,19 @@
 			"args": [
 				"-c",
 				"source /ws/install/setup.bash && ros2 run ur_robotiq motion_test"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}",
+			},
+			"problemMatcher": [],
+		},
+		{
+			"label": "Task: calibrate_gloves",
+			"type": "shell",
+			"command": "bash",
+			"args": [
+				"-c",
+				"source /ws/install/setup.bash && ros2 run ur_robotiq calibrate_gloves"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}",
