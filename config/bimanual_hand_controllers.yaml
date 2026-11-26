@@ -4,10 +4,13 @@ controller_manager:
     # according to 2x read and 2x write 8 ms blocking calls according to 125Hz UR 
     # driver update rate. Lower values may cause instability and errors in the UR 
     # driver (disconnection due to timeout).
-    update_rate: 33
+    update_rate: 100
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
+
+    joint_trajectory_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
 
     left_arm_controller:
       type: joint_trajectory_controller/JointTrajectoryController
@@ -201,12 +204,12 @@ left_cartesian_controller:
         iterations: 10
         publish_state_feedback: True
     pd_gains:
-        trans_x: {p: 0.5}
-        trans_y: {p: 0.5}
-        trans_z: {p: 0.5}
-        rot_x: {p: 1.0}
-        rot_y: {p: 1.0}
-        rot_z: {p: 1.0}
+        trans_x: {p: 5.0}
+        trans_y: {p: 5.0}
+        trans_z: {p: 5.0}
+        rot_x: {p: 5.0}
+        rot_y: {p: 5.0}
+        rot_z: {p: 5.0}
 
 right_cartesian_controller:
   ros__parameters:
@@ -226,9 +229,36 @@ right_cartesian_controller:
         iterations: 10
         publish_state_feedback: True
     pd_gains:
-        trans_x: {p: 0.5}
-        trans_y: {p: 0.5}
-        trans_z: {p: 0.5}
-        rot_x: {p: 1.0}
-        rot_y: {p: 1.0}
-        rot_z: {p: 1.0}
+        trans_x: {p: 5.0}
+        trans_y: {p: 5.0}
+        trans_z: {p: 5.0}
+        rot_x: {p: 5.0}
+        rot_y: {p: 5.0}
+        rot_z: {p: 5.0}
+
+joint_trajectory_controller:
+  ros__parameters:
+    type: joint_trajectory_controller/JointTrajectoryController
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+    joints:
+      - left_shoulder_pan_joint
+      - left_shoulder_lift_joint
+      - left_elbow_joint
+      - left_wrist_1_joint
+      - left_wrist_2_joint
+      - left_wrist_3_joint
+      - left_hand_j_thumb_fle
+      - left_hand_j_index_fle
+      - left_hand_j_mrl_fle
+      - right_shoulder_pan_joint
+      - right_shoulder_lift_joint
+      - right_elbow_joint
+      - right_wrist_1_joint
+      - right_wrist_2_joint
+      - right_wrist_3_joint
+      - right_hand_j_thumb_fle
+      - right_hand_j_index_fle
+      - right_hand_j_mrl_fle

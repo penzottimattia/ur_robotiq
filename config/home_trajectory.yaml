@@ -36,22 +36,22 @@ joint_names:
 
 points:
   - positions:
-      - 0.3808500    # left_shoulder_pan_joint
-      - -1.866378    # left_shoulder_lift_joint
-      - -1.772227    # left_elbow_joint
-      - 3.6457374    # left_wrist_1_joint
-      - -1.239481    # left_wrist_2_joint
-      - 0.0         # left_wrist_3_joint
+      - 0.40185168385505676    # left_shoulder_pan_joint
+      - -1.6020105520831507    # left_shoulder_lift_joint
+      - -2.1288889090167444    # left_elbow_joint
+      - 3.697854995727539    # left_wrist_1_joint
+      - -1.2538612524615687    # left_wrist_2_joint
+      - 0.0629744827747345   # left_wrist_3_joint
       # --- left hand (placeholder -- send me your values) ---
       - 0.0         # left_hand_j_thumb_fle
       - 0.3         # left_hand_j_index_fle
       - 0.0         # left_hand_j_mrl_fle
-      - -0.583944   # right_shoulder_pan_joint
-      - -1.300019   # right_shoulder_lift_joint
-      - 1.8046739   # right_elbow_joint
-      - -0.437823   # right_wrist_1_joint
-      - 0.9512651   # right_wrist_2_joint
-      - 0.0         # right_wrist_3_joint
+      - -0.3016927878009241   # right_shoulder_pan_joint
+      - -1.4911988417254847   # right_shoulder_lift_joint
+      - 2.1070361137390137   # right_elbow_joint
+      - -0.623387638722555   # right_wrist_1_joint
+      - 1.4065922498703003   # right_wrist_2_joint
+      - 0.0842333734035492   # right_wrist_3_joint
       # --- right hand (placeholder -- send me your values) ---
       - 0.0         # right_hand_j_thumb_fle
       - 0.3         # right_hand_j_index_fle

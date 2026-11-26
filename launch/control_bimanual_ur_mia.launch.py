@@ -353,26 +353,29 @@ def generate_launch_description():
         mode = LaunchConfiguration('mode').perform(context)
         use_cartesian_stitcher = LaunchConfiguration('use_cartesian_stitcher').perform(context)
         use_aikido = LaunchConfiguration('use_aikido').perform(context) == 'true'
-        if mode == 'calib' or use_cartesian_stitcher == 'true':
-            return []
-        if use_aikido:
-            # The aikido controller takes over all joints (arm and gripper). The
-            # joint_trajectory_controller is loaded as well but left in the stopped
-            # state so it does not claim command interfaces and can be activated on
-            # demand later (ros2 control activate_controller joint_trajectory_controller).
-            return [Node(
-                package='controller_manager',
-                executable='spawner',
-                arguments=['joint_trajectory_controller', '--stopped', '--controller-manager', '/controller_manager'],
-                output='screen',
-            )]
+        # The joint_trajectory_controller is always loaded but left in the
+        # stopped state so it does not claim command interfaces and can be
+        # activated on demand later
+        # (ros2 control activate_controller joint_trajectory_controller).
+        actions = [Node(
+            package='controller_manager',
+            executable='spawner',
+            arguments=['joint_trajectory_controller', '--stopped', '--controller-manager', '/controller_manager'],
+            output='screen',
+        )]
+        # calib mode uses only the joint_state_broadcaster; use_cartesian_stitcher
+        # spawns the arm/gripper controllers; and the aikido controller takes
+        # over all joints (arm and gripper) in use_aikido mode.
+        if mode == 'calib' or use_cartesian_stitcher == 'true' or use_aikido:
+            return actions
         controllers = ['left_cartesian_controller', 'right_cartesian_controller', 'left_hand_controller', 'right_hand_controller']
-        return [Node(
+        actions.append(Node(
             package='controller_manager',
             executable='spawner',
             arguments=controllers + ['--controller-manager', '/controller_manager'],
             output='screen',
-        )]
+        ))
+        return actions
 
     stopped_controller_spawner = OpaqueFunction(function=launch_stopped_controller_spawner)
 
